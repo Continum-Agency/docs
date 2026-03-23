@@ -1,97 +1,134 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "A 'Safe Detonation Zone'"
+description: "Distributed compliance layer for LLMs with zero-latency auditing"
 ---
 
-## Setting up
+## What is Continum?
 
-Get your documentation site up and running in minutes.
+Continum is a compliance infrastructure that audits every LLM interaction in your application without adding latency to user responses. It provides comprehensive safety and compliance monitoring for AI applications.
 
 <Card
-  title="Start here"
+  title="Get started in 5 minutes"
   icon="rocket"
   href="/quickstart"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Install the SDK and start auditing your LLM calls
 </Card>
 
-## Make it yours
+## The Problem
 
-Design a docs site that looks great and empowers your users.
+Modern AI applications face critical challenges:
+
+- LLMs can leak PII, generate biased content, or be jailbroken
+- Manual review doesn't scale to production traffic
+- Blocking calls for compliance checks adds 2-5 seconds of latency
+- Existing tools are either too slow or miss edge cases
+
+## The Solution
+
+Continum provides zero-latency compliance auditing through asynchronous processing:
+
+1. **SDK intercepts** your LLM calls (OpenAI, Claude, Gemini)
+2. **Returns response instantly** to your users (0ms added latency)
+3. **Mirrors the interaction** asynchronously to isolated sandboxes
+4. **Validates compliance** using Claude as the judge
+5. **Stores signals** in your dashboard for monitoring and alerts
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY
+});
+
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
+});
+// ✅ User gets response instantly
+// ✅ Compliance audit runs in background
+// ✅ Violations appear in dashboard
+```
+
+## Key Features
 
 <Columns cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Zero Latency"
+    icon="bolt"
+    href="/concepts/zero-latency"
   >
-    Edit your docs locally and preview them in real time.
+    Users get responses instantly while compliance runs asynchronously
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Guardian Protection"
+    icon="shield"
+    href="/concepts/guardian"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    Pre-LLM PII detection and redaction in under 100ms
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
+    title="15+ Sandbox Types"
+    icon="cube"
+    href="/concepts/sandbox"
   >
-    Auto-generate API documentation from OpenAPI specifications.
+    PII, bias, security, prompt injection, agent safety, and more
+  </Card>
+  <Card
+    title="Real-time Dashboard"
+    icon="chart-line"
+    href="/dashboard/overview"
+  >
+    Monitor violations, track usage, and export compliance reports
   </Card>
 </Columns>
 
-## Create beautiful pages
+## Comprehensive Detection
 
-Everything you need to create world-class documentation.
+Continum detects a wide range of compliance issues:
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<Columns cols={3}>
+  <Card title="PII Detection" icon="user-lock" href="/compliance/pii-detection">
+    Names, emails, SSN, credit cards, health data
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Bias Detection" icon="scale-balanced" href="/compliance/bias-detection">
+    Racial, gender, age, disability discrimination
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="Security Audit" icon="bug" href="/compliance/security-audit">
+    SQL injection, XSS, secret leaks
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card title="Prompt Injection" icon="syringe" href="/compliance/prompt-injection">
+    Jailbreaks, system prompt extraction
+  </Card>
+  <Card title="Agent Safety" icon="robot" href="/compliance/agent-safety">
+    Infinite loops, irreversible actions, scope creep
+  </Card>
+  <Card title="Hallucination" icon="eye-slash" href="/compliance/hallucination">
+    Fake citations, false confidence
   </Card>
 </Columns>
 
-## Need inspiration?
+## Architecture
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
+<Card title="Understand the architecture" icon="diagram-project" href="/concepts/architecture">
+  Learn how Continum's distributed architecture enables zero-latency compliance
 </Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="play" href="/quickstart">
+    Get up and running in 5 minutes
+  </Card>
+  <Card title="SDK Installation" icon="download" href="/sdk/installation">
+    Install and configure the SDK
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore the REST API
+  </Card>
+  <Card title="Dashboard Guide" icon="gauge" href="/dashboard/overview">
+    Navigate the compliance dashboard
+  </Card>
+</CardGroup>

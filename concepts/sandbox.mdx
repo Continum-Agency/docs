@@ -1,0 +1,381 @@
+---
+title: "Sandbox"
+description: "Isolated compliance checking environments"
+---
+
+## What is a Sandbox?
+
+A sandbox is an isolated compliance checking environment that defines what violations to detect and how to handle them. Each sandbox has:
+
+- **Type**: What to check for (PII, bias, security, etc.)
+- **Rules**: Custom compliance rules
+- **Regulations**: Which regulations apply (GDPR, CCPA, etc.)
+- **Alert Threshold**: Minimum risk level to alert on
+- **Guardian Action**: How to handle pre-LLM detections
+
+## Sandbox Types
+
+Continum supports 15 specialized sandbox types:
+
+### PII_DETECTION
+
+Detects personally identifiable information:
+
+- Names, emails, phone numbers
+- SSN, passport numbers, driver's licenses
+- Credit cards, bank accounts
+- Health data, biometric identifiers
+- IP addresses, location data
+
+**Use case**: Customer support, user-generated content
+
+### BIAS_DETECTION
+
+Detects discriminatory content:
+
+- Racial, gender, religious bias
+- Age, disability discrimination
+- Sycophantic bias
+- Intersectional bias
+
+**Use case**: HR applications, content moderation
+
+### SECURITY_AUDIT
+
+Detects security vulnerabilities:
+
+- SQL injection, XSS, CSRF
+- Secret leaks (API keys, passwords)
+- Dangerous instructions
+- Infrastructure exposure
+
+**Use case**: Code generation, technical support
+
+### PROMPT_INJECTION
+
+Detects prompt manipulation:
+
+- Direct injection attacks
+- Jailbreak attempts (DAN, STAN)
+- System prompt extraction
+- Goal hijacking
+
+**Use case**: All LLM applications
+
+### AGENT_SAFETY
+
+Detects unsafe agent behavior:
+
+- Infinite loops, resource exhaustion
+- Irreversible actions without confirmation
+- Scope creep, privilege escalation
+- Deceptive alignment
+
+**Use case**: AI agents, autonomous systems
+
+### HALLUCINATION_DETECTION
+
+Detects false information:
+
+- Fake citations, fabricated papers
+- Invented statistics
+- False confidence
+- Expert impersonation
+
+**Use case**: Research, education, professional advice
+
+### CONTENT_POLICY
+
+Detects harmful content:
+
+- Violence, sexual content
+- CSAM (zero tolerance)
+- Hate speech, harassment
+- Self-harm facilitation
+
+**Use case**: Content platforms, social applications
+
+### FINANCIAL_COMPLIANCE
+
+Detects financial regulation violations:
+
+- Unlicensed financial advice
+- Insider trading facilitation
+- Market manipulation
+- Fraud enablement
+
+**Use case**: Fintech, investment platforms
+
+### LEGAL_COMPLIANCE
+
+Detects legal liability issues:
+
+- Unauthorized legal advice
+- Copyright infringement
+- Defamation risk
+- Privacy law breaches
+
+**Use case**: Legal tech, content platforms
+
+### FULL_SPECTRUM
+
+Comprehensive checking across all categories.
+
+**Use case**: Production applications requiring maximum protection
+
+### CUSTOM
+
+Define your own rules and detection logic.
+
+**Use case**: Industry-specific compliance
+
+## Creating a Sandbox
+
+### Via Dashboard
+
+1. Navigate to Sandboxes in the dashboard
+2. Click "Create Sandbox"
+3. Choose a type
+4. Set a slug (e.g., `my-sandbox`)
+5. Configure options
+6. Save
+
+### Via API
+
+```bash
+curl -X POST https://api.continum.co/sandboxes \
+  -H "Content-Type: application/json" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -d '{
+    "name": "My Sandbox",
+    "slug": "my-sandbox",
+    "sandboxType": "PII_DETECTION",
+    "regulations": ["GDPR", "CCPA", "HIPAA"],
+    "alertThreshold": "MEDIUM",
+    "guardianAction": "REDACT_AND_CONTINUE",
+    "customRules": [
+      "No medical advice",
+      "No financial recommendations"
+    ]
+  }'
+```
+
+## Sandbox Configuration
+
+### name
+
+Human-readable name for the sandbox:
+
+```json
+{
+  "name": "Customer Support PII Protection"
+}
+```
+
+### slug
+
+Unique identifier used in API calls:
+
+```json
+{
+  "slug": "my-sandbox"
+}
+```
+
+Must be lowercase, alphanumeric, and use underscores.
+
+### sandboxType
+
+The type of compliance checking:
+
+```json
+{
+  "sandboxType": "PII_DETECTION"
+}
+```
+
+Options: `PII_DETECTION`, `BIAS_DETECTION`, `SECURITY_AUDIT`, `PROMPT_INJECTION`, `AGENT_SAFETY`, `HALLUCINATION_DETECTION`, `CONTENT_POLICY`, `FINANCIAL_COMPLIANCE`, `LEGAL_COMPLIANCE`, `FULL_SPECTRUM`, `CUSTOM`
+
+### regulations
+
+Which regulations to check against:
+
+```json
+{
+  "regulations": ["GDPR", "CCPA", "HIPAA", "EU_AI_ACT"]
+}
+```
+
+### alertThreshold
+
+Minimum risk level to alert on:
+
+```json
+{
+  "alertThreshold": "MEDIUM"
+}
+```
+
+Options: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+
+### guardianAction
+
+How Guardian handles pre-LLM detections:
+
+```json
+{
+  "guardianAction": "REDACT_AND_CONTINUE"
+}
+```
+
+Options:
+- `ALLOW_ALL`: Log but don't redact
+- `REDACT_AND_CONTINUE`: Redact and continue
+- `BLOCK_ON_DETECT`: Block LLM call
+
+### customRules
+
+Additional rules specific to your use case:
+
+```json
+{
+  "customRules": [
+    "No medical diagnoses",
+    "No investment advice",
+    "No legal conclusions"
+  ]
+}
+```
+
+### region
+
+Geographic region for compliance:
+
+```json
+{
+  "region": "EU"
+}
+```
+
+Options: `GLOBAL`, `US`, `EU`, `UK`, `APAC`
+
+### active
+
+Enable or disable the sandbox:
+
+```json
+{
+  "active": true
+}
+```
+
+## Using Sandboxes
+
+### With SDK
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY
+});
+
+// Use default sandbox
+const response1 = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'sandbox-one'  // Specify sandbox
+});
+
+// Override sandbox for specific call
+const response2 = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Generate code' }],
+  sandbox: 'sandbox-two'  // Different sandbox
+});
+```
+
+### With API
+
+```bash
+curl -X POST https://api.continum.co/audit/ingest \
+  -H "Content-Type: application/json" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -d '{
+    "sandboxSlug": "pii_strict",
+    "provider": "openai",
+    "model": "gpt-4o",
+    "prompt": "Hello",
+    "response": "Hi there!"
+  }'
+```
+
+## Plan Limits
+
+Sandbox limits vary by plan:
+
+| Plan | Sandboxes | Audits/Month |
+|------|-----------|--------------|
+| DEV | 1 | 1,000 |
+| PRO | 10 | Unlimited |
+| PRO_MAX | 25 | Unlimited |
+| ENTERPRISE | Unlimited | Unlimited |
+
+## Best Practices
+
+### Naming Convention
+
+Use descriptive slugs:
+
+```
+✅ Good: my-sandbox, support-sandbox, code-gen-sandbox
+❌ Bad: sandbox1, test, my_sandbox
+```
+
+### Multiple Sandboxes
+
+Create sandboxes for different use cases:
+
+```typescript
+// Customer support
+defaultSandbox: 'support-sandbox'
+
+// Code generation
+defaultSandbox: 'code-sandbox'
+
+// Content moderation
+defaultSandbox: 'content-sandbox'
+```
+
+### Testing
+
+Test sandboxes before production:
+
+1. Create a test sandbox
+2. Run sample audits
+3. Review signals in dashboard
+4. Adjust configuration
+5. Deploy to production
+
+### Monitoring
+
+Monitor sandbox performance:
+
+- Signal volume per sandbox
+- Risk level distribution
+- False positive rate
+- Processing time
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Signal" icon="signal" href="/concepts/signal">
+    Understand audit results
+  </Card>
+  <Card title="Guardian" icon="shield" href="/concepts/guardian">
+    Configure pre-LLM protection
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/sandbox/create">
+    Sandbox API documentation
+  </Card>
+  <Card title="Dashboard" icon="gauge" href="/dashboard/sandboxes">
+    Manage sandboxes
+  </Card>
+</CardGroup>

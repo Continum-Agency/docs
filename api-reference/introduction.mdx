@@ -1,33 +1,228 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: "API Introduction"
+description: "Getting started with the Continum REST API"
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Base URL
 
-## Welcome
+All API requests should be made to:
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
-
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+```
+https://api.continum.co
+```
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+Authenticate using your API key in the `x-continum-key` header:
+
+```bash
+curl https://api.continum.co/customers \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+## API Keys
+
+Get your API key from the [dashboard](https://app.continum.co/dashboard):
+
+1. Sign in with GitHub
+2. Create a customer account
+3. Navigate to API Keys
+4. Generate a new key
+
+<Warning>
+  API keys are shown only once. Save them securely.
+</Warning>
+
+## Request Format
+
+All requests must include:
+
+- `Content-Type: application/json` header
+- `x-continum-key` header with your API key
+- JSON body (for POST/PUT requests)
+
+```bash
+curl -X POST https://api.continum.co/audit/ingest \
+  -H "Content-Type: application/json" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -d '{
+    "sandboxSlug": "pii_strict",
+    "provider": "openai",
+    "model": "gpt-4o",
+    "prompt": "Hello",
+    "response": "Hi there!"
+  }'
+```
+
+## Response Format
+
+All responses are JSON with the following structure:
+
+### Success Response
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
+{
+  "data": {
+    // Response data
   }
-]
+}
 ```
+
+### Error Response
+
+```json
+{
+  "statusCode": 400,
+  "message": "Sandbox not found",
+  "error": "Bad Request"
+}
+```
+
+## HTTP Status Codes
+
+| Code | Meaning | Description |
+|------|---------|-------------|
+| 200 | OK | Request succeeded |
+| 201 | Created | Resource created successfully |
+| 202 | Accepted | Request accepted for async processing |
+| 400 | Bad Request | Invalid request parameters |
+| 401 | Unauthorized | Missing or invalid API key |
+| 403 | Forbidden | Plan limit reached or insufficient permissions |
+| 404 | Not Found | Resource not found |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Server Error | Server error |
+
+## Rate Limits
+
+Rate limits vary by plan:
+
+| Plan | Rate Limit | Burst |
+|------|------------|-------|
+| DEV | 10 req/s | 50 |
+| PRO | 100 req/s | 500 |
+| PRO_MAX | 500 req/s | 2500 |
+| ENTERPRISE | Custom | Custom |
+
+Rate limit headers are included in responses:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1640000000
+```
+
+## Pagination
+
+List endpoints support pagination:
+
+```bash
+curl "https://api.continum.co/dashboard/signals?page=1&limit=50" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Response includes pagination metadata:
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 1234,
+    "pages": 25
+  }
+}
+```
+
+## Filtering
+
+Many endpoints support filtering:
+
+```bash
+# Filter signals by risk level
+curl "https://api.continum.co/dashboard/signals?riskLevel=HIGH" \
+  -H "x-continum-key: co_your_api_key_here"
+
+# Filter by date range
+curl "https://api.continum.co/dashboard/signals?from=2024-01-01&to=2024-01-31" \
+  -H "x-continum-key: co_your_api_key_here"
+
+# Combine filters
+curl "https://api.continum.co/dashboard/signals?riskLevel=HIGH&sandboxSlug=pii_strict" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+## Idempotency
+
+POST requests that create resources support idempotency keys:
+
+```bash
+curl -X POST https://api.continum.co/sandboxes \
+  -H "Content-Type: application/json" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Idempotency-Key: unique-key-123" \
+  -d '{
+    "name": "My Sandbox",
+    "slug": "my_sandbox",
+    "sandboxType": "PII_DETECTION"
+  }'
+```
+
+## Webhooks (Coming Soon)
+
+Subscribe to events via webhooks:
+
+```json
+{
+  "url": "https://your-app.com/webhook",
+  "events": ["signal.high", "signal.critical"],
+  "secret": "your_webhook_secret"
+}
+```
+
+## SDKs
+
+Official SDKs are available:
+
+<CardGroup cols={2}>
+  <Card title="TypeScript/JavaScript" icon="js" href="/sdk/installation">
+    npm install @continum/sdk
+  </Card>
+  <Card title="Python" icon="python">
+    Coming soon
+  </Card>
+  <Card title="Go" icon="golang">
+    Coming soon
+  </Card>
+  <Card title="Ruby" icon="gem">
+    Coming soon
+  </Card>
+</CardGroup>
+
+## API Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Customer" icon="user" href="/api-reference/customer/create">
+    Manage customer accounts
+  </Card>
+  <Card title="Sandbox" icon="cube" href="/api-reference/sandbox/create">
+    Configure compliance sandboxes
+  </Card>
+  <Card title="Guardian" icon="shield" href="/api-reference/guardian/scan">
+    Pre-LLM PII detection
+  </Card>
+  <Card title="Mirror" icon="copy" href="/api-reference/mirror/ingest">
+    Async audit ingestion
+  </Card>
+  <Card title="Dashboard" icon="chart-line" href="/api-reference/dashboard/signals">
+    Query compliance signals
+  </Card>
+</CardGroup>
+
+## Support
+
+Need help with the API?
+
+- Email: [support@continum.co](mailto:support@continum.co)
+- Documentation: [docs.continum.co](https://docs.continum.co)
+- Dashboard: [app.continum.co](https://app.continum.co)

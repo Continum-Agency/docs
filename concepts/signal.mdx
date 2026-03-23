@@ -1,0 +1,343 @@
+---
+title: "Signal"
+description: "Understanding compliance audit results"
+---
+
+## What is a Signal?
+
+A signal is the result of a compliance audit. It contains:
+
+- **Risk Level**: LOW, MEDIUM, HIGH, or CRITICAL
+- **Violations**: List of violation codes
+- **Reasoning**: Explanation of what was detected
+- **Metadata**: Provider, model, tokens, duration
+
+## Signal Structure
+
+```typescript
+{
+  auditId: string;           // Unique audit identifier
+  customerId: string;        // Your customer ID
+  sandboxId: string;         // Sandbox used
+  provider: string;          // 'openai' | 'anthropic' | 'gemini'
+  model: string;             // Model name
+  promptTokens: number;      // Input tokens
+  outputTokens: number;      // Output tokens
+  hasThinkingBlock: boolean; // Reasoning trace present
+  riskLevel: RiskLevel;      // LOW | MEDIUM | HIGH | CRITICAL
+  violations: string[];      // Violation codes
+  piiDetected: boolean;      // PII found
+  reasoning: string;         // Redacted explanation
+  regulation: string[];      // Violated regulations
+  region: string;            // Geographic region
+  durationMs: number;        // Processing time
+  createdAt: Date;           // Timestamp
+}
+```
+
+## Risk Levels
+
+### LOW
+
+Minor issues that don't require immediate action:
+
+- Borderline content
+- Low-confidence detections
+- Informational warnings
+
+**Example**: Ambiguous language that could be interpreted as biased
+
+### MEDIUM
+
+Issues that should be reviewed:
+
+- Moderate policy violations
+- Potential PII leakage
+- Questionable content
+
+**Example**: Email address in response without explicit user consent
+
+### HIGH
+
+Serious violations requiring attention:
+
+- Clear PII leakage
+- Discriminatory content
+- Security vulnerabilities
+- Prompt injection attempts
+
+**Example**: SSN or credit card number in response
+
+### CRITICAL
+
+Severe violations requiring immediate action:
+
+- CSAM (zero tolerance)
+- Explicit dangerous instructions
+- Severe security breaches
+- Regulatory violations
+
+**Example**: Any content involving minors in sexual context
+
+## Violation Codes
+
+Signals include specific violation codes:
+
+### PII Violations
+
+- `PII_LEAK`: General PII detected
+- `EMAIL`: Email address
+- `SSN`: Social Security Number
+- `CREDIT_CARD`: Credit card number
+- `PHONE`: Phone number
+- `PASSPORT`: Passport number
+- `HEALTH_DATA`: Medical information
+- `FINANCIAL_DATA`: Financial information
+
+### Bias Violations
+
+- `RACIAL_BIAS`: Racial discrimination
+- `GENDER_BIAS`: Gender discrimination
+- `AGE_BIAS`: Age discrimination
+- `DISABILITY_BIAS`: Disability discrimination
+- `RELIGIOUS_BIAS`: Religious discrimination
+- `INTERSECTIONAL_BIAS`: Multiple bias types
+
+### Security Violations
+
+- `CODE_INJECTION`: SQL, command, or code injection
+- `SECRET_LEAK`: API keys, passwords, tokens
+- `XSS`: Cross-site scripting
+- `SSRF`: Server-side request forgery
+- `DANGEROUS_INSTRUCTIONS`: Harmful how-to content
+
+### Prompt Injection
+
+- `PROMPT_INJECTION`: Direct injection attack
+- `JAILBREAK_ATTEMPT`: DAN, STAN, or similar
+- `SYSTEM_PROMPT_EXTRACTION`: Attempting to reveal system prompt
+- `GOAL_HIJACKING`: Redirecting model behavior
+
+### Agent Safety
+
+- `AGENT_LOOP`: Infinite loop or recursion
+- `IRREVERSIBLE_ACTION`: Dangerous action without confirmation
+- `SCOPE_CREEP`: Acting outside intended scope
+- `PRIVILEGE_ESCALATION`: Attempting elevated permissions
+
+### Content Policy
+
+- `VIOLENT_CONTENT`: Graphic violence
+- `SEXUAL_CONTENT`: Sexual content
+- `CSAM`: Child sexual abuse material (CRITICAL)
+- `HATE_SPEECH`: Dehumanizing language
+- `SELF_HARM_FACILITATION`: Suicide or self-harm content
+
+## Viewing Signals
+
+### Dashboard
+
+View signals in the [dashboard](https://app.continum.co/dashboard):
+
+- Risk level breakdown
+- Recent signals
+- Filter by sandbox, provider, model
+- Date range filtering
+- Export for compliance reports
+
+### API
+
+Query signals programmatically:
+
+```bash
+curl "https://api.continum.co/dashboard/signals?riskLevel=HIGH&limit=50" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Response:
+
+```json
+{
+  "signals": [
+    {
+      "auditId": "aud_123",
+      "riskLevel": "HIGH",
+      "violations": ["PII_LEAK", "EMAIL"],
+      "reasoning": "Email j****@example.com detected in response",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "sandbox": {
+        "slug": "my-sandbox",
+        "name": "My Sandbox"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 123
+  }
+}
+```
+
+## Filtering Signals
+
+### By Risk Level
+
+```bash
+curl "https://api.continum.co/dashboard/signals?riskLevel=HIGH" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+### By Sandbox
+
+```bash
+curl "https://api.continum.co/dashboard/signals?sandboxSlug=my-sandbox" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+### By Provider
+
+```bash
+curl "https://api.continum.co/dashboard/signals?provider=openai" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+### By Date Range
+
+```bash
+curl "https://api.continum.co/dashboard/signals?from=2024-01-01&to=2024-01-31" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+### Combined Filters
+
+```bash
+curl "https://api.continum.co/dashboard/signals?riskLevel=HIGH&sandboxSlug=my-sandbox&from=2024-01-01" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+## Signal Reasoning
+
+Signals include redacted reasoning to protect PII:
+
+```json
+{
+  "reasoning": "Email j****@example.com and SSN ***-**-6789 detected in response. User did not explicitly request this information."
+}
+```
+
+This allows you to understand what was detected while protecting sensitive data.
+
+## Dashboard Statistics
+
+Get aggregate statistics:
+
+```bash
+curl "https://api.continum.co/dashboard/stats" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Response:
+
+```json
+{
+  "totalAudits": 12345,
+  "riskBreakdown": {
+    "LOW": 10000,
+    "MEDIUM": 2000,
+    "HIGH": 300,
+    "CRITICAL": 45
+  },
+  "topViolations": [
+    { "code": "PII_LEAK", "count": 234 },
+    { "code": "EMAIL", "count": 189 },
+    { "code": "PROMPT_INJECTION", "count": 67 }
+  ],
+  "sandboxBreakdown": [
+    { "slug": "sandbox-one", "count": 8000 },
+    { "slug": "sandbox-two", "count": 4345 }
+  ]
+}
+```
+
+## Exporting Signals
+
+Export signals for compliance reports:
+
+```bash
+curl "https://api.continum.co/dashboard/signals/export?format=csv&from=2024-01-01&to=2024-01-31" \
+  -H "x-continum-key: co_your_api_key_here" \
+  > signals.csv
+```
+
+Formats: `csv`, `json`, `xlsx`
+
+## Webhooks (Coming Soon)
+
+Receive real-time alerts for high-risk signals:
+
+```json
+{
+  "url": "https://your-app.com/webhook",
+  "events": ["signal.high", "signal.critical"],
+  "filters": {
+    "sandboxSlug": "my-sandbox",
+    "riskLevel": ["HIGH", "CRITICAL"]
+  }
+}
+```
+
+## Best Practices
+
+### Monitoring
+
+Set up regular monitoring:
+
+- Daily review of CRITICAL signals
+- Weekly review of HIGH signals
+- Monthly compliance reports
+
+### Alerting
+
+Configure alerts for critical issues:
+
+- Email notifications for CRITICAL
+- Slack/Discord webhooks for HIGH
+- Dashboard monitoring for MEDIUM/LOW
+
+### Response Workflow
+
+Establish a response workflow:
+
+1. **CRITICAL**: Immediate investigation and remediation
+2. **HIGH**: Review within 24 hours
+3. **MEDIUM**: Review within 1 week
+4. **LOW**: Monthly review
+
+### Compliance Reports
+
+Generate regular compliance reports:
+
+- Monthly audit summaries
+- Violation trend analysis
+- Sandbox performance metrics
+- Regulatory compliance status
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Dashboard" icon="gauge" href="/dashboard/signals">
+    View signals in dashboard
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/dashboard/signals">
+    Query signals via API
+  </Card>
+  <Card title="Sandbox" icon="cube" href="/concepts/sandbox">
+    Configure sandboxes
+  </Card>
+  <Card title="Compliance" icon="shield-check" href="/compliance/pii-detection">
+    Learn about compliance types
+  </Card>
+</CardGroup>

@@ -1,0 +1,226 @@
+---
+title: "Zero-Latency Auditing"
+description: "How Continum achieves compliance without blocking user responses"
+---
+
+## The Latency Problem
+
+Traditional compliance solutions add 2-5 seconds to every LLM call:
+
+```
+User Request → Compliance Check (2-5s) → LLM Call (500ms) → Response
+Total: 2.5-5.5 seconds 😞
+```
+
+This is unacceptable for production applications where users expect instant responses.
+
+## Continum's Solution
+
+Continum inverts the flow - compliance runs after the user already has their answer:
+
+```
+User Request → LLM Call (500ms) → Response ⚡
+                    ↓
+            [Async Compliance] (2-5s, user doesn't wait)
+```
+
+## How It Works
+
+### 1. Direct Execution
+
+The SDK calls your LLM provider directly using your API keys:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY  // Stays on your server
+});
+
+// This calls OpenAI directly, no proxy
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+// Response in ~500ms, same as direct OpenAI call
+```
+
+**Key insight**: Continum never sits between you and the LLM provider.
+
+### 2. Async Mirroring
+
+After returning the response, the SDK fires a non-blocking request:
+
+```typescript
+// User already has response here ✅
+
+// SDK does this in background (not awaited):
+fetch('https://api.continum.co/audit/ingest', {
+  method: 'POST',
+  body: JSON.stringify({
+    sandboxSlug: 'your-sandbox-slug',
+    provider: 'openai',
+    model: 'gpt-4o',
+    prompt: 'Hello',
+    response: 'Hi there!',
+    metadata: { ... }
+  })
+});
+```
+
+### 3. Queue Processing
+
+The API immediately queues the audit and returns:
+
+```
+POST /audit/ingest → Validate → Queue for processing → Return 202 Accepted
+Total: < 50ms (but SDK doesn't wait for this either)
+```
+
+### 4. Compliance Processing
+
+The Compliance Engine processes audits asynchronously:
+
+```
+Receive audit (2-5s later)
+  ↓
+Analyze for compliance violations
+  ↓
+Stores signal in database
+  ↓
+Appears in dashboard
+```
+
+## Performance Comparison
+
+| Approach | User Latency | Compliance Delay | Production Ready |
+|----------|--------------|------------------|------------------|
+| Blocking compliance | 2.5-5.5s | 0s (inline) | ❌ Too slow |
+| No compliance | 500ms | ∞ (never) | ❌ Risky |
+| Continum | 500ms | 2-5s (async) | ✅ Best of both |
+
+## Guardian: Fast Pre-LLM Protection
+
+For cases where you need pre-LLM protection (e.g., blocking PII before it reaches the LLM), Continum offers Guardian:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  guardianEnabled: true  // Enable pre-LLM PII detection
+});
+
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'My email is john@example.com' }]
+});
+// Guardian detects PII in < 100ms
+// Redacts before sending to OpenAI
+// Total latency: ~600ms (still acceptable)
+```
+
+Guardian uses fast local pattern matching + lightweight ML models to detect PII in under 100ms.
+
+## Unified Flow
+
+Continum combines Guardian (pre-LLM) and Mirror (post-LLM) in one seamless flow:
+
+```
+1. Guardian Check (< 100ms)
+   ↓
+2. Direct LLM Call (~500ms)
+   ↓
+3. Return Response to User ⚡
+   ↓
+4. Async Mirror Audit (2-5s, background)
+```
+
+Total user-facing latency: ~600ms (vs 2.5-5.5s with blocking compliance)
+
+## Real-World Example
+
+```typescript
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  defaultSandbox: 'your-sandbox-slug',
+  guardianConfig: {
+    enabled: true,
+    action: 'REDACT_AND_CONTINUE'
+  }
+});
+
+// User sends message with PII
+const userMessage = 'My SSN is 123-45-6789 and email is john@example.com';
+
+const start = Date.now();
+
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: userMessage }]
+});
+
+const latency = Date.now() - start;
+console.log(`User latency: ${latency}ms`); // ~600ms
+
+console.log(response.content); // User sees response immediately
+
+// Meanwhile, in the background:
+// - Guardian detected SSN and email (< 100ms)
+// - Redacted before sending to OpenAI
+// - Mirror audit running in background (2-5s)
+// - Signal will appear in dashboard shortly
+```
+
+## Why This Matters
+
+### For Users
+- Instant responses (no waiting for compliance)
+- Same experience as direct LLM calls
+- No degraded performance
+
+### For Developers
+- Drop-in replacement for existing LLM calls
+- No architecture changes required
+- Keep your API keys on your server
+
+### For Compliance Teams
+- 100% coverage of LLM interactions
+- Real-time dashboard monitoring
+- Audit trail for regulations
+
+## Trade-offs
+
+### What You Get
+✅ Zero added latency for users  
+✅ 100% compliance coverage  
+✅ Real-time monitoring  
+✅ Privacy-first architecture  
+
+### What You Accept
+⚠️ Compliance results appear 2-5s after response (not inline)  
+⚠️ Can't block response based on post-LLM audit (use Guardian for pre-LLM blocking)  
+
+## When to Use Guardian vs Mirror
+
+| Use Case | Solution | Latency | When to Use |
+|----------|----------|---------|-------------|
+| Block PII before LLM | Guardian | +100ms | User input might contain PII |
+| Audit for compliance | Mirror | +0ms | Post-hoc monitoring and reporting |
+| Both | Guardian + Mirror | +100ms | Maximum protection + monitoring |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Guardian" icon="shield" href="/concepts/guardian">
+    Learn about pre-LLM PII protection
+  </Card>
+  <Card title="Mirror" icon="copy" href="/concepts/mirror">
+    Understand async audit mirroring
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/concepts/architecture">
+    Explore the full system architecture
+  </Card>
+  <Card title="SDK Configuration" icon="gear" href="/sdk/configuration">
+    Configure Guardian and Mirror settings
+  </Card>
+</CardGroup>

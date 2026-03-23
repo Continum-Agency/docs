@@ -1,0 +1,354 @@
+---
+title: "Configuration"
+description: "Configure the Continum SDK for your use case"
+---
+
+## Configuration Options
+
+The Continum SDK accepts the following configuration options:
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  // Required
+  continumKey: string;
+  
+  // Provider API keys (at least one required)
+  openaiKey?: string;
+  anthropicKey?: string;
+  geminiKey?: string;
+  
+  // Or use unified format
+  apiKeys?: {
+    openai?: string;
+    anthropic?: string;
+    gemini?: string;
+  };
+  
+  // Optional
+  defaultSandbox?: string;
+  
+  // Guardian configuration
+  guardianConfig?: {
+    enabled?: boolean;
+    action?: 'BLOCK_ON_DETECT' | 'REDACT_AND_CONTINUE' | 'ALLOW_ALL';
+    localOnly?: boolean;
+    customPatterns?: Array<{
+      name: string;
+      pattern: RegExp;
+      riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    }>;
+  };
+  
+  // Detonation configuration
+  detonationConfig?: {
+    enabled?: boolean;
+  };
+  
+  // Strict mode
+  strictMirror?: boolean;
+});
+```
+
+## Required Configuration
+
+### continumKey
+
+Your Continum API key from the dashboard.
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY
+});
+```
+
+### Provider API Keys
+
+At least one LLM provider API key is required:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,      // For OpenAI models
+  anthropicKey: process.env.ANTHROPIC_API_KEY, // For Claude models
+  geminiKey: process.env.GEMINI_API_KEY        // For Gemini models
+});
+```
+
+## Optional Configuration
+
+### defaultSandbox
+
+The default sandbox to use for all audits (optional but recommended):
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  defaultSandbox: 'your-sandbox-slug'  // Use this sandbox by default
+});
+
+// Uses default sandbox
+const response1 = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+
+// Override per call
+const response2 = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'another-sandbox'  // Override default
+});
+```
+
+<Warning>
+  If no `defaultSandbox` is set, you must specify `sandbox` in each call. Calls without a sandbox will not be audited.
+</Warning>
+
+### guardianConfig
+
+Configure pre-LLM PII protection:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  guardianConfig: {
+    enabled: true,  // Enable Guardian (default: true)
+    action: 'REDACT_AND_CONTINUE'  // Action when PII detected
+  }
+});
+```
+
+**Guardian Actions**:
+- `ALLOW_ALL`: Log detection but don't redact (monitoring mode)
+- `REDACT_AND_CONTINUE`: Redact PII and continue with LLM call (default)
+- `BLOCK_ON_DETECT`: Block LLM call if PII detected
+
+### detonationConfig
+
+Configure post-LLM shadow auditing:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  detonationConfig: {
+    enabled: true  // Enable shadow auditing (default: true)
+  }
+});
+```
+
+### endpoint
+
+Custom Continum API endpoint (for self-hosted deployments):
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  endpoint: 'https://your-continum-instance.com'
+});
+```
+
+### timeout
+
+Request timeout in milliseconds:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000  // 30 seconds
+});
+```
+
+### retries
+
+Number of retry attempts for failed requests:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  retries: 3  // Retry up to 3 times
+});
+```
+
+## Environment-Specific Configuration
+
+### Development
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  defaultSandbox: 'dev-sandbox',
+  guardianConfig: {
+    enabled: false  // Disable for faster iteration
+  }
+});
+```
+
+### Production
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  defaultSandbox: 'prod-sandbox',
+  guardianConfig: {
+    enabled: true,
+    action: 'REDACT_AND_CONTINUE'
+  },
+  detonationConfig: {
+    enabled: true
+  }
+});
+```
+
+## Per-Call Configuration
+
+Override configuration for individual calls:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  defaultSandbox: 'pii_strict'
+});
+
+// Override sandbox for this call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'security_audit',  // Use different sandbox
+  guardianEnabled: false,     // Disable Guardian for this call
+  metadata: {
+    userId: 'user_123',
+    feature: 'chat'
+  }
+});
+```
+
+## Multiple Instances
+
+Create multiple Continum instances for different use cases:
+
+```typescript
+// Instance for customer support (strict PII protection)
+const supportContinum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  defaultSandbox: 'support-sandbox',
+  guardianConfig: {
+    enabled: true,
+    action: 'REDACT_AND_CONTINUE'
+  }
+});
+
+// Instance for code generation (security focus)
+const codeContinum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  defaultSandbox: 'code-sandbox',
+  guardianConfig: {
+    enabled: false
+  }
+});
+
+// Use appropriate instance
+const supportResponse = await supportContinum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Help me with my account' }]
+});
+
+const codeResponse = await codeContinum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Write a function to sort an array' }]
+});
+```
+
+## Configuration Best Practices
+
+### Use Environment Variables
+
+Never hardcode API keys:
+
+```typescript
+// ❌ Bad
+const continum = new Continum({
+  continumKey: 'co_abc123...',
+  openaiKey: 'sk-abc123...'
+});
+
+// ✅ Good
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY
+});
+```
+
+### Validate Configuration
+
+Check configuration at startup:
+
+```typescript
+function createContinum() {
+  if (!process.env.CONTINUM_KEY) {
+    throw new Error('CONTINUM_KEY environment variable is required');
+  }
+  
+  if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    throw new Error('At least one LLM provider API key is required');
+  }
+  
+  return new Continum({
+    continumKey: process.env.CONTINUM_KEY,
+    openaiKey: process.env.OPENAI_API_KEY,
+    anthropicKey: process.env.ANTHROPIC_API_KEY,
+    defaultSandbox: process.env.DEFAULT_SANDBOX || 'your-sandbox-slug'
+  });
+}
+
+const continum = createContinum();
+```
+
+### Singleton Pattern
+
+Create a single instance and reuse it:
+
+```typescript
+// continum.ts
+import { Continum } from '@continum/sdk';
+
+export const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  openaiKey: process.env.OPENAI_API_KEY,
+  defaultSandbox: 'your-sandbox-slug',
+  guardianConfig: {
+    enabled: true
+  }
+});
+
+// app.ts
+import { continum } from './continum';
+
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="OpenAI Integration" icon="https://cdn.simpleicons.org/openai" href="/sdk/openai">
+    Use OpenAI models with Continum
+  </Card>
+  <Card title="Anthropic Integration" icon="https://cdn.simpleicons.org/anthropic" href="/sdk/anthropic">
+    Use Claude models with Continum
+  </Card>
+  <Card title="Streaming" icon="water" href="/sdk/streaming">
+    Stream responses from LLMs
+  </Card>
+  <Card title="Vision" icon="eye" href="/sdk/vision">
+    Use vision models with images
+  </Card>
+</CardGroup>

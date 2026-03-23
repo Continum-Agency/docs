@@ -1,0 +1,188 @@
+---
+title: "Installation"
+description: "Install and set up the Continum SDK"
+---
+
+## Installation
+
+Install the Continum SDK using your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm install @continum/sdk
+```
+
+```bash yarn
+yarn add @continum/sdk
+```
+
+```bash pnpm
+pnpm add @continum/sdk
+```
+
+</CodeGroup>
+
+## Requirements
+
+- Node.js 18+ or Bun 1.0+
+- TypeScript 5.0+ (recommended)
+- At least one LLM provider API key (OpenAI, Anthropic, or Gemini)
+
+## Get Your API Key
+
+1. Sign up at [app.continum.co](https://app.continum.co)
+2. Create a customer account
+3. Generate an API key
+4. Save it securely (you won't see it again)
+
+## Environment Variables
+
+Create a `.env` file in your project root:
+
+```bash
+# Continum API key (required)
+CONTINUM_KEY=co_your_api_key_here
+
+# LLM Provider keys (at least one required)
+OPENAI_API_KEY=sk-your_openai_key
+ANTHROPIC_API_KEY=sk-ant-your_anthropic_key
+GEMINI_API_KEY=your_gemini_key
+```
+
+## Basic Setup
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY
+});
+
+// Make your first call - specify sandbox per call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [
+    { role: 'user', content: 'Hello, world!' }
+  ],
+  sandbox: 'your-sandbox-slug'  // Sandbox is required for auditing
+});
+
+console.log(response.content);
+```
+
+## TypeScript Support
+
+The SDK is written in TypeScript and includes full type definitions:
+
+```typescript
+import { Continum, ChatResult, ContinumConfig } from '@continum/sdk';
+
+const config: ContinumConfig = {
+  continumKey: process.env.CONTINUM_KEY!,
+  openaiKey: process.env.OPENAI_API_KEY,
+  guardianEnabled: true
+};
+
+const continum = new Continum(config);
+
+const response: ChatResult = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for this call
+});
+```
+
+## Verify Installation
+
+Test your setup with this simple script:
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+async function test() {
+  const continum = new Continum({
+    continumKey: process.env.CONTINUM_KEY,
+    openaiKey: process.env.OPENAI_API_KEY,
+    defaultSandbox: 'your-sandbox-slug'
+  });
+
+  try {
+    const response = await continum.llm.openai.gpt_4o.chat({
+      messages: [{ role: 'user', content: 'Say hello' }]
+    });
+    
+    console.log('✅ SDK working!');
+    console.log('Response:', response.content);
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  }
+}
+
+test();
+```
+
+Run it:
+
+```bash
+npx tsx test.ts
+# or
+node test.js
+```
+
+## Common Issues
+
+### Missing API Key
+
+```
+Error: Missing continumKey in configuration
+```
+
+**Solution**: Ensure `CONTINUM_KEY` is set in your environment variables.
+
+### Invalid API Key
+
+```
+Error: Invalid API key
+```
+
+**Solution**: Verify your API key in the [dashboard](https://app.continum.co/dashboard).
+
+### Sandbox Not Found
+
+```
+Error: Sandbox "my-sandbox" not found
+```
+
+**Solution**: Create the sandbox in the dashboard first, or use an existing sandbox slug.
+
+### Provider Key Missing
+
+```
+Error: OpenAI API key required for this call
+```
+
+**Solution**: Ensure the provider's API key is configured:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY  // Add this
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/sdk/configuration">
+    Learn about SDK configuration options
+  </Card>
+  <Card title="OpenAI Integration" icon="/images/openai.svg" href="/sdk/openai">
+    Use OpenAI models with Continum
+  </Card>
+  <Card title="Anthropic Integration" icon="https://cdn.simpleicons.org/anthropic" href="/sdk/anthropic">
+    Use Claude models with Continum
+  </Card>
+  <Card title="Gemini Integration" icon="https://cdn.simpleicons.org/googlegemini" href="/sdk/gemini">
+    Use Gemini models with Continum
+  </Card>
+</CardGroup>

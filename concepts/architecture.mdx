@@ -1,0 +1,218 @@
+---
+title: "Architecture"
+description: "Understanding Continum's distributed compliance architecture"
+---
+
+## System Overview
+
+Continum uses a distributed architecture to achieve zero-latency compliance auditing. The system is designed around the principle of "sovereignty-first" - your API keys stay on your server, and compliance runs asynchronously.
+
+```
+Developer App (SDK)
+      │
+      ├─→ [Direct] → OpenAI/Claude/Gemini → Response (instant) ⚡
+      │
+      └─→ [Async Mirror] → Continum Platform
+                              ↓
+                          Compliance Engine
+                              ↓
+                          Signal Stored
+                              ↓
+                          Dashboard
+```
+
+## Components
+
+### SDK (Client-side)
+
+The Continum SDK runs on your server and manages three responsibilities:
+
+1. **Direct execution**: Calls LLM providers directly using your API keys
+2. **Guardian check**: Optional pre-LLM PII detection (< 100ms)
+3. **Async mirroring**: Sends compliance triplet to Continum Platform (non-blocking)
+
+**Key insight**: The SDK never waits for compliance results before returning the LLM response.
+
+### Continum Platform
+
+The Continum Platform handles:
+
+- Customer and API key management
+- Sandbox configuration
+- Audit ingestion
+- Signal storage and retrieval
+- Dashboard queries
+
+### Compliance Engine
+
+The Compliance Engine runs audits in isolated sandboxes:
+
+- Loads sandbox configuration (type, rules, regulations)
+- Analyzes prompt and response for violations
+- Returns risk level, violations, and reasoning
+- Stores signals for monitoring
+
+**Isolation**: Each audit runs in a fresh, stateless sandbox environment.
+
+### Dashboard
+
+Web app for monitoring compliance:
+
+- Real-time signal viewing
+- Risk level breakdown
+- Sandbox management
+- API key generation
+
+## Data Flow
+
+### 1. LLM Call with Compliance
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+```
+
+**What happens**:
+1. SDK calls OpenAI directly → response in ~500ms
+2. SDK returns response to your app immediately
+3. SDK fires async request to Continum Platform (non-blocking)
+
+### 2. Audit Ingestion
+
+```
+POST /audit/ingest
+{
+  "sandboxSlug": "pii_strict",
+  "provider": "openai",
+  "model": "gpt-4o",
+  "prompt": "Hello",
+  "response": "Hi there!",
+  "metadata": { ... }
+}
+```
+
+**What happens**:
+1. Platform validates sandbox exists
+2. Platform increments audit count
+3. Audit queued for processing
+4. Platform returns 202 Accepted immediately
+
+### 3. Compliance Processing
+
+```
+Compliance Engine receives audit
+  ↓
+Loads sandbox config (type, rules, regulations)
+  ↓
+Analyzes prompt and response
+  ↓
+Generates risk level + violations
+  ↓
+Stores signal
+```
+
+### 4. Signal Storage
+
+```
+Signal stored:
+{
+  "auditId": "uuid",
+  "riskLevel": "HIGH",
+  "violations": ["PII_LEAK"],
+  "reasoning": "Email j****@example.com detected",
+  ...
+}
+```
+
+**What happens**:
+1. Signal stored securely
+2. Available in dashboard immediately
+3. Accessible via API queries
+
+## Security Model
+
+### API Key Management
+
+- **Storage**: Military-grade encryption with secure hash lookup
+- **Transmission**: HTTPS only with `x-continum-key` header
+- **Rotation**: Generate new keys anytime, old keys invalidated
+
+### Data Privacy
+
+- **Your API keys**: Never leave your server
+- **Compliance triplets**: Sent to Continum after user has response
+- **Sandbox isolation**: Each audit runs in fresh isolated environment
+- **No storage of raw data**: Only signals (risk level + violations) stored
+
+### Compliance Standards
+
+Continum adheres to:
+- SOC 2 Type II compliance
+- GDPR data protection requirements
+- CCPA privacy standards
+- Industry-standard encryption (AES-256)
+
+## Scalability
+
+### Horizontal Scaling
+
+- **SDK**: Runs on your servers (scales with your app)
+- **Platform**: Auto-scales based on traffic
+- **Compliance Engine**: Processes thousands of audits concurrently
+- **Dashboard**: Optimized for fast queries
+
+### Performance
+
+- **User latency**: 0ms added (direct LLM call)
+- **Guardian**: < 100ms for PII detection
+- **Audit processing**: 2-5 seconds (async, user doesn't wait)
+- **Dashboard queries**: < 100ms with optimized indexing
+
+## Integration
+
+### SDK Setup
+
+Install the SDK in your application:
+
+```bash
+npm install @continum/sdk
+```
+
+Configure with your API key:
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY
+});
+```
+
+### Environment Variables
+
+**Your Application**:
+```bash
+CONTINUM_KEY=co_xxx
+OPENAI_API_KEY=sk-xxx
+ANTHROPIC_API_KEY=sk-ant-xxx
+GEMINI_API_KEY=xxx
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Zero Latency" icon="bolt" href="/concepts/zero-latency">
+    Learn how zero-latency auditing works
+  </Card>
+  <Card title="Guardian" icon="shield" href="/concepts/guardian">
+    Understand pre-LLM protection
+  </Card>
+  <Card title="Sandbox" icon="cube" href="/concepts/sandbox">
+    Explore sandbox types
+  </Card>
+  <Card title="Signal" icon="signal" href="/concepts/signal">
+    Understand audit results
+  </Card>
+</CardGroup>

@@ -1,80 +1,155 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get started with Continum in 5 minutes"
 ---
 
-## Get started in three steps
+## Get your API key
 
-Get your documentation site running locally and make your first customization.
+Sign up at [app.continum.co](https://app.continum.co) and create your first API key.
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Sign in with GitHub">
+    Navigate to the app and authenticate with your GitHub account.
+  </Step>
+  <Step title="Create a customer account">
+    Choose your account type (Individual or Company) and plan (DEV, PRO, PRO_MAX, or ENTERPRISE).
+  </Step>
+  <Step title="Generate API key">
+    Your API key will be displayed once. Save it securely - you won't be able to see it again.
+  </Step>
+</Steps>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Install the SDK
 
-### Step 2: Deploy your changes
+<CodeGroup>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+```bash npm
+npm install @continum/sdk
+```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```bash yarn
+yarn add @continum/sdk
+```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+```bash pnpm
+pnpm add @continum/sdk
+```
 
-### Step 3: Go live
+</CodeGroup>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+## Create your first sandbox
+
+Sandboxes define what compliance checks to run. Create one in the dashboard or via API:
+
+```typescript
+// In the app dashboard:
+// 1. Navigate to Sandboxes
+// 2. Click "Create Sandbox"
+// 3. Choose a type (e.g., PII_DETECTION)
+// 4. Set a slug (e.g., "my-sandbox")
+```
+
+## Basic usage
+
+Replace your existing LLM calls with Continum:
+
+<CodeGroup>
+
+```typescript OpenAI
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY
+});
+
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'What is the capital of France?' }
+  ],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
+});
+
+console.log(response.content);
+```
+
+```typescript Anthropic
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  anthropicKey: process.env.ANTHROPIC_API_KEY
+});
+
+const response = await continum.llm.claude.opus_4.chat({
+  messages: [
+    { role: 'user', content: 'What is the capital of France?' }
+  ],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
+});
+
+console.log(response.content);
+```
+
+```typescript Gemini
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  geminiKey: process.env.GEMINI_API_KEY
+});
+
+const response = await continum.llm.gemini.pro_2_0.chat({
+  messages: [
+    { role: 'user', content: 'What is the capital of France?' }
+  ],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
+});
+
+console.log(response.content);
+```
+
+</CodeGroup>
+
+## What happens next?
+
+1. **Instant response**: Your user gets the LLM response immediately (0ms added latency)
+2. **Guardian check**: If enabled, PII is detected and redacted pre-LLM (< 100ms)
+3. **Async audit**: The interaction is mirrored to your sandbox for compliance checking
+4. **Signal stored**: Results appear in your dashboard within seconds
+
+## View your signals
+
+Navigate to your [dashboard](https://app.continum.co/dashboard) to see compliance signals:
+
+- Risk level breakdown (LOW, MEDIUM, HIGH, CRITICAL)
+- Violation types and reasoning
+- Filter by sandbox, provider, model, date range
+- Export for compliance reports
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
+<Card title="Configure SDK" icon="gear" href="/sdk/configuration">
+  Learn about advanced SDK configuration options
 </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
+<Card title="Sandbox types" icon="cube" href="/concepts/sandbox">
+  Explore 15+ compliance sandbox types
 </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
+<Card title="Guardian protection" icon="shield" href="/concepts/guardian">
+  Enable pre-LLM PII detection and redaction
 </Card>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
+<Card title="API reference" icon="code" href="/api-reference/introduction">
+  Explore the REST API endpoints
 </Card>
 
 </CardGroup>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Dev plan limits**: The DEV plan includes 1 sandbox and 1,000 audits. Upgrade to PRO for unlimited audits and more sandboxes.
 </Note>

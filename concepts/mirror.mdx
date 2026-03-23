@@ -1,0 +1,371 @@
+---
+title: "Mirror"
+description: "Asynchronous compliance auditing without blocking user responses"
+---
+
+## What is Mirror?
+
+Mirror is Continum's async auditing system that captures every LLM interaction and validates it against compliance rules without adding latency to user responses.
+
+## How Mirror Works
+
+### 1. Compliance Triplet
+
+After your LLM call completes, the SDK sends a "compliance triplet" to Continum:
+
+```typescript
+{
+  provider: 'openai',
+  model: 'gpt-4o',
+  prompt: 'User message',
+  response: 'LLM response',
+  metadata: {
+    promptTokens: 10,
+    outputTokens: 20,
+    hasThinkingBlock: false
+  }
+}
+```
+
+### 2. Audit Ingestion
+
+The Platform validates and queues the audit:
+
+```
+POST /audit/ingest
+  ↓
+Validate sandbox exists
+  ↓
+Increment audit count
+  ↓
+Queue for processing
+  ↓
+Return 202 Accepted (< 50ms)
+```
+
+### 3. Compliance Processing
+
+The Compliance Engine processes the audit:
+
+```
+Receive audit request
+  ↓
+Load sandbox config (type, rules, regulations)
+  ↓
+Analyze prompt and response
+  ↓
+Generate risk level + violations
+  ↓
+Store signal
+```
+
+### 4. Signal Storage
+
+The audit result (signal) is stored and appears in your dashboard:
+
+```typescript
+{
+  auditId: 'uuid',
+  riskLevel: 'HIGH',
+  violations: ['PII_LEAK', 'EMAIL'],
+  piiDetected: true,
+  reasoning: 'Email j****@example.com detected in response',
+  regulation: ['GDPR', 'CCPA'],
+  durationMs: 3200
+}
+```
+
+## SDK Integration
+
+Mirror is automatically enabled when using the Continum SDK:
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY
+});
+
+// Mirror runs automatically
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
+});
+
+// User gets response immediately ✅
+// Mirror audit runs in background (2-5s)
+// Signal appears in dashboard
+```
+
+## API Endpoint
+
+### POST /audit/ingest
+
+Manually ingest a compliance triplet:
+
+```typescript
+const response = await fetch('https://api.continum.co/audit/ingest', {
+  method: 'POST',
+  headers: {
+    'x-continum-key': process.env.CONTINUM_KEY,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    sandboxSlug: 'pii_strict',
+    provider: 'openai',
+    model: 'gpt-4o',
+    prompt: 'What is the capital of France?',
+    response: 'The capital of France is Paris.',
+    metadata: {
+      promptTokens: 8,
+      outputTokens: 9,
+      hasThinkingBlock: false
+    }
+  })
+});
+
+// Returns 202 Accepted immediately
+// Audit runs asynchronously
+```
+
+## What Gets Audited?
+
+Mirror analyzes both the prompt and response for compliance issues:
+
+### Prompt Analysis
+- User input validation
+- PII in user messages
+- Prompt injection attempts
+- Jailbreak patterns
+
+### Response Analysis
+- PII leakage in LLM output
+- Biased or discriminatory content
+- Hallucinations and false information
+- Security vulnerabilities in code
+- Dangerous instructions
+
+### Metadata Analysis
+- Token usage patterns
+- Thinking block analysis (o1, o3, Claude Opus)
+- Model behavior anomalies
+
+## Sandbox Types
+
+Mirror uses sandbox configurations to determine what to check:
+
+```typescript
+// PII Detection sandbox
+{
+  sandboxType: 'PII_DETECTION',
+  regulations: ['GDPR', 'CCPA', 'HIPAA'],
+  alertThreshold: 'HIGH'
+}
+
+// Full Spectrum sandbox (checks everything)
+{
+  sandboxType: 'FULL_SPECTRUM',
+  regulations: ['GDPR', 'EU_AI_ACT', 'CCPA'],
+  customRules: ['No medical advice', 'No financial recommendations'],
+  alertThreshold: 'MEDIUM'
+}
+```
+
+See [Sandbox documentation](/concepts/sandbox) for all types.
+
+## Thinking Block Analysis
+
+Mirror can analyze reasoning traces from advanced models:
+
+```typescript
+const response = await continum.llm.openai.o3.chat({
+  messages: [{ role: 'user', content: 'How to bypass security?' }],
+  reasoning_effort: 'high'
+});
+
+// Mirror captures:
+// - User prompt
+// - Thinking block (reasoning trace)
+// - Final response
+// - Analyzes for adversarial intent in reasoning
+```
+
+This is critical for detecting:
+- Hidden jailbreak attempts
+- Deceptive reasoning
+- Adversarial optimization
+
+## Performance
+
+Mirror is designed for high throughput:
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Ingestion latency | < 50ms | Platform ingestion |
+| Processing time | 2-5s | Compliance analysis |
+| Throughput | 1000+ req/s | Auto-scaling |
+| User impact | 0ms | Fully asynchronous |
+
+## Error Handling
+
+Mirror includes robust error handling:
+
+### Retry Logic
+- Automatic retries (3 attempts)
+- Exponential backoff
+- Failed audit tracking
+
+### Validation
+- Sandbox must exist before ingestion
+- API key must be valid
+- Plan limits enforced (DEV: 1000 audits)
+
+### Monitoring
+- Real-time metrics
+- Queue depth monitoring
+- Failed audit alerts
+
+## Privacy & Security
+
+### Data Handling
+
+**What Continum receives**:
+- Prompt text
+- Response text
+- Metadata (tokens, model, provider)
+
+**What Continum stores**:
+- Audit ID
+- Risk level (LOW, MEDIUM, HIGH, CRITICAL)
+- Violation codes
+- Redacted reasoning
+- Timestamp and duration
+
+**What Continum never stores**:
+- Your API keys (stay on your server)
+- Raw PII (redacted in reasoning)
+- User identifiers
+
+### Sandbox Isolation
+
+Each audit runs in a fresh isolated environment:
+- No state persisted between audits
+- No cross-contamination
+- Stateless compliance checking
+
+## Compliance Triplet Structure
+
+```typescript
+interface MirrorTriplet {
+  sandboxSlug: string;      // Which sandbox to use
+  provider: string;         // 'openai' | 'anthropic' | 'gemini'
+  model: string;            // 'gpt-4o' | 'claude-opus-4' | 'gemini-pro-2.0'
+  prompt: string;           // User input + system prompt
+  response: string;         // LLM output
+  metadata?: {
+    promptTokens?: number;
+    outputTokens?: number;
+    hasThinkingBlock?: boolean;
+    thinkingBlock?: string; // For o1, o3, Claude Opus
+    customFields?: Record<string, any>;
+  };
+}
+```
+
+## Best Practices
+
+### Sandbox Selection
+
+Choose the right sandbox for your use case:
+
+```typescript
+// For customer support (PII risk)
+defaultSandbox: 'support-sandbox'
+
+// For code generation (security risk)
+defaultSandbox: 'code-sandbox'
+
+// For general use (comprehensive)
+defaultSandbox: 'general-sandbox'
+```
+
+### Metadata Enrichment
+
+Add custom metadata for better auditing:
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  metadata: {
+    userId: 'user_123',        // Your internal user ID
+    sessionId: 'session_456',  // Session tracking
+    feature: 'chat',           // Which feature
+    environment: 'production'  // Env tracking
+  }
+});
+```
+
+### Error Handling
+
+Handle ingestion errors gracefully:
+
+```typescript
+try {
+  const response = await continum.llm.openai.gpt_4o.chat({
+    messages: [{ role: 'user', content: 'Hello' }]
+  });
+  return response;
+} catch (error) {
+  if (error.code === 'SANDBOX_NOT_FOUND') {
+    // Create sandbox or use fallback
+  } else if (error.code === 'AUDIT_LIMIT_REACHED') {
+    // Upgrade plan or disable auditing
+  }
+  throw error;
+}
+```
+
+## Monitoring
+
+### Dashboard Queries
+
+Query signals in the dashboard:
+
+- Filter by risk level
+- Filter by sandbox
+- Filter by date range
+- Filter by provider/model
+- Export for compliance reports
+
+### Webhooks (Coming Soon)
+
+Receive real-time alerts for high-risk signals:
+
+```typescript
+{
+  webhook: 'https://your-app.com/continum-webhook',
+  events: ['signal.high', 'signal.critical'],
+  filters: {
+    sandboxSlug: 'pii_strict',
+    riskLevel: ['HIGH', 'CRITICAL']
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Sandbox" icon="cube" href="/concepts/sandbox">
+    Configure sandbox types
+  </Card>
+  <Card title="Signal" icon="signal" href="/concepts/signal">
+    Understand audit results
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/mirror/ingest">
+    Mirror API documentation
+  </Card>
+  <Card title="Dashboard" icon="chart-line" href="/dashboard/signals">
+    View signals in dashboard
+  </Card>
+</CardGroup>

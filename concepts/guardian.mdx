@@ -1,0 +1,339 @@
+---
+title: "Guardian"
+description: "Pre-LLM PII detection and redaction in under 100ms"
+---
+
+## What is Guardian?
+
+Guardian is Continum's pre-LLM protection layer that detects and redacts PII before it reaches your LLM provider. It runs in under 100ms, making it suitable for production use.
+
+## Why Guardian?
+
+### The Problem
+
+Users might accidentally send PII to your AI application:
+
+```
+User: "My email is john@example.com and SSN is 123-45-6789"
+  ↓
+LLM receives PII (❌ compliance violation)
+  ↓
+LLM might include PII in response
+  ↓
+PII logged in LLM provider's systems
+```
+
+### The Solution
+
+Guardian intercepts and redacts PII before the LLM sees it:
+
+```
+User: "My email is john@example.com and SSN is 123-45-6789"
+  ↓
+Guardian detects PII (< 100ms)
+  ↓
+Redacted: "My email is [EMAIL_REDACTED] and SSN is [SSN_REDACTED]"
+  ↓
+LLM receives clean input ✅
+```
+
+## How It Works
+
+### 1. Pattern Matching
+
+Guardian uses regex patterns to detect common PII types:
+
+- Email addresses
+- US SSN (123-45-6789)
+- Credit cards (4111-1111-1111-1111)
+- Phone numbers (+1-555-123-4567)
+- UK/US Passports
+- Health/Medical IDs
+- IP addresses
+- Physical addresses
+
+### 2. Entity Detection
+
+For complex PII (names, locations), Guardian uses lightweight ML models:
+
+- Named Entity Recognition (NER)
+- Context-aware detection
+- Confidence scoring
+
+### 3. Redaction Strategies
+
+Guardian offers multiple redaction strategies:
+
+**Full redaction**:
+```
+"john@example.com" → "[EMAIL_REDACTED]"
+```
+
+**Partial redaction** (preserves context):
+```
+"john@example.com" → "j****@example.com"
+"123-45-6789" → "***-**-6789"
+```
+
+**Hashed redaction** (consistent across requests):
+```
+"john@example.com" → "[EMAIL_a3f9c2]"
+```
+
+## Configuration
+
+### Enable Guardian
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  guardianEnabled: true,  // Enable Guardian
+  guardianAction: 'REDACT_AND_CONTINUE'  // or 'BLOCK_ON_DETECT'
+});
+```
+
+### Guardian Actions
+
+Configure what happens when PII is detected:
+
+**REDACT_AND_CONTINUE** (default):
+- Redacts PII from prompt
+- Continues with LLM call
+- User gets response with redacted input
+
+**BLOCK_ON_DETECT**:
+- Blocks LLM call entirely
+- Returns error to user
+- No LLM call made
+
+**ALLOW_ALL**:
+- Logs detection but doesn't redact
+- Useful for monitoring without blocking
+
+### Sandbox Configuration
+
+Set Guardian action per sandbox:
+
+```typescript
+// In dashboard or via API
+{
+  "name": "Strict PII Protection",
+  "slug": "pii_strict",
+  "sandboxType": "PII_DETECTION",
+  "guardianAction": "BLOCK_ON_DETECT",  // Block if PII detected
+  "alertThreshold": "MEDIUM"
+}
+```
+
+## API Endpoint
+
+### POST /guardian/scan
+
+Scan a prompt for PII before sending to LLM:
+
+```typescript
+const response = await fetch('https://api.continum.co/guardian/scan', {
+  method: 'POST',
+  headers: {
+    'x-continum-key': process.env.CONTINUM_KEY,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    sandbox: 'pii_strict',
+    provider: 'openai',
+    model: 'gpt-4o',
+    systemPrompt: 'You are a helpful assistant',
+    userInput: 'My email is john@example.com'
+  })
+});
+
+const result = await response.json();
+/*
+{
+  "action": "REDACT",
+  "violations": ["EMAIL"],
+  "reasoning": "Email j****@example.com detected",
+  "cleanPrompt": "My email is [EMAIL_REDACTED]",
+  "confidence": 0.98,
+  "detectedEntities": [
+    {
+      "type": "EMAIL",
+      "originalValue": "john@example.com",
+      "redactedValue": "j****@example.com",
+      "start": 12,
+      "end": 28,
+      "confidence": 0.98
+    }
+  ],
+  "durationMs": 87
+}
+*/
+```
+
+## SDK Integration
+
+Guardian is automatically integrated when enabled:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  openaiKey: process.env.OPENAI_API_KEY,
+  guardianEnabled: true
+});
+
+// Guardian runs automatically before LLM call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [
+    { role: 'user', content: 'My SSN is 123-45-6789' }
+  ]
+});
+
+// If guardianAction is REDACT_AND_CONTINUE:
+// - Guardian detects SSN
+// - Redacts to "My SSN is [SSN_REDACTED]"
+// - Sends redacted prompt to OpenAI
+// - Returns response to user
+
+// If guardianAction is BLOCK_ON_DETECT:
+// - Guardian detects SSN
+// - Throws error: "PII detected, request blocked"
+// - No LLM call made
+```
+
+## Performance
+
+Guardian is optimized for production use:
+
+| Operation | Latency | Notes |
+|-----------|---------|-------|
+| Pattern matching | 10-30ms | Regex-based detection |
+| Entity detection | 50-80ms | ML-based NER |
+| Total Guardian overhead | < 100ms | Acceptable for production |
+
+## Detected PII Types
+
+Guardian detects the following PII categories:
+
+### Personal Identifiers
+- Full names (with context)
+- Email addresses
+- Phone numbers
+- Physical addresses
+
+### Government IDs
+- US Social Security Numbers (SSN)
+- UK/US Passport numbers
+- Driver's license numbers
+- National ID numbers
+
+### Financial Data
+- Credit/debit card numbers
+- CVV codes
+- Bank account numbers
+- IBAN codes
+- Cryptocurrency wallet addresses
+
+### Health Data
+- Medical record numbers (MRN)
+- Health insurance IDs
+- Prescription numbers
+- Biometric identifiers
+
+### Technical Identifiers
+- IP addresses (when linked to individuals)
+- Device IDs
+- Session tokens
+- API keys
+
+## Guardian Scans in Dashboard
+
+All Guardian scans are logged and visible in the dashboard:
+
+- Detected PII types
+- Redaction applied
+- Action taken (ALLOW, REDACT, BLOCK)
+- Confidence scores
+- Duration
+
+## Best Practices
+
+### When to Enable Guardian
+
+✅ **Enable Guardian when**:
+- Users can input free-form text
+- Application handles sensitive data
+- Compliance requires pre-LLM protection
+- GDPR/CCPA/HIPAA applies
+
+❌ **Skip Guardian when**:
+- Input is fully controlled (no user input)
+- Performance is critical (< 100ms not acceptable)
+- Post-hoc auditing is sufficient
+
+### Choosing Guardian Action
+
+**REDACT_AND_CONTINUE**:
+- Best for most use cases
+- Maintains user experience
+- Protects LLM from PII
+- Logs violations for monitoring
+
+**BLOCK_ON_DETECT**:
+- Maximum protection
+- Use for highly sensitive applications
+- May frustrate users if false positives
+- Consider showing helpful error message
+
+**ALLOW_ALL**:
+- Monitoring mode
+- Use during testing/rollout
+- Logs detections without blocking
+- Upgrade to REDACT after validation
+
+## Limitations
+
+### False Positives
+
+Guardian may flag non-PII as PII:
+
+```
+"Call me at extension 1234" → Detected as phone number
+"My favorite number is 123-45-6789" → Detected as SSN
+```
+
+**Mitigation**: Use confidence thresholds and context-aware detection.
+
+### False Negatives
+
+Guardian may miss obfuscated PII:
+
+```
+"My email is john at example dot com" → Not detected
+"SSN: one two three four five six seven eight nine" → Not detected
+```
+
+**Mitigation**: Combine Guardian with post-LLM Mirror auditing.
+
+### Language Support
+
+Guardian is optimized for English. Other languages may have reduced accuracy.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Mirror" icon="copy" href="/concepts/mirror">
+    Learn about post-LLM auditing
+  </Card>
+  <Card title="Sandbox" icon="cube" href="/concepts/sandbox">
+    Configure sandbox types
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/guardian/scan">
+    Guardian API documentation
+  </Card>
+  <Card title="PII Detection" icon="user-lock" href="/compliance/pii-detection">
+    Comprehensive PII detection guide
+  </Card>
+</CardGroup>

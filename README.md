@@ -1,55 +1,112 @@
-# Mintlify Starter Kit
+# Continum Documentation
 
-Use the starter kit to get your docs deployed and ready to customize.
+Official documentation for Continum - the distributed compliance layer for LLMs.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+## What's Included
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+This documentation covers:
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
+- **Getting Started**: Quick installation and setup guides
+- **Core Concepts**: Architecture, zero-latency auditing, Guardian, Mirror, Sandbox, Signal
+- **SDK Integration**: TypeScript/JavaScript SDK with OpenAI, Anthropic, and Gemini support
+- **Compliance**: PII detection, bias detection, security auditing, and more
+- **API Reference**: Complete REST API documentation
+- **Dashboard**: Using the web console for monitoring
 
-## AI-assisted writing
+## Documentation Structure
 
-Set up your AI coding tool to work with Mintlify:
-
-```bash
-npx skills add https://mintlify.com/docs
 ```
-
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
-
-See the [AI tools guides](/ai-tools) for tool-specific setup.
+apps/docs/
+├── index.mdx                    # Homepage
+├── quickstart.mdx               # 5-minute quickstart
+├── concepts/                    # Core concepts
+│   ├── architecture.mdx
+│   ├── zero-latency.mdx
+│   ├── guardian.mdx
+│   ├── mirror.mdx
+│   ├── sandbox.mdx
+│   └── signal.mdx
+├── sdk/                         # SDK documentation
+│   ├── installation.mdx
+│   ├── configuration.mdx
+│   ├── openai.mdx
+│   ├── anthropic.mdx
+│   ├── gemini.mdx
+│   ├── streaming.mdx
+│   ├── vision.mdx
+│   └── tools.mdx
+├── compliance/                  # Compliance guides
+│   ├── pii-detection.mdx
+│   ├── bias-detection.mdx
+│   ├── security-audit.mdx
+│   ├── prompt-injection.mdx
+│   ├── agent-safety.mdx
+│   ├── hallucination.mdx
+│   └── regulations.mdx
+├── dashboard/                   # Dashboard guides
+│   ├── overview.mdx
+│   ├── signals.mdx
+│   ├── sandboxes.mdx
+│   └── api-keys.mdx
+└── api-reference/              # API documentation
+    ├── introduction.mdx
+    ├── authentication.mdx
+    ├── customer/
+    ├── sandbox/
+    ├── guardian/
+    ├── mirror/
+    └── dashboard/
+```
 
 ## Development
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
+Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview documentation locally:
 
-```
+```bash
 npm i -g mint
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+Run the development server:
 
-```
+```bash
+cd apps/docs
 mint dev
 ```
 
 View your local preview at `http://localhost:3000`.
 
-## Publishing changes
+## Key Features Documented
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+### Zero-Latency Auditing
+- How Continum achieves 0ms added latency
+- Direct LLM execution with async compliance
+- Guardian pre-LLM protection (< 100ms)
 
-## Need help?
+### Comprehensive Detection
+- 15+ sandbox types for different compliance needs
+- PII, bias, security, prompt injection, agent safety
+- Hallucination, financial/legal compliance
 
-### Troubleshooting
+### Privacy-First Architecture
+- API keys stay on your server
+- Only compliance triplets sent to Continum
+- Stateless sandbox isolation
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
+### Real-Time Monitoring
+- Dashboard for viewing signals
+- Risk level breakdown
+- Filter by sandbox, provider, model, date
 
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+## Publishing Changes
+
+Documentation is automatically deployed when changes are pushed to the main branch.
+
+## Need Help?
+
+- **Documentation**: [docs.continum.co](https://docs.continum.co)
+- **Dashboard**: [console.continum.co](https://console.continum.co)
+- **Support**: [support@continum.co](mailto:support@continum.co)
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on contributing to the documentation.
