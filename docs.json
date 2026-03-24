@@ -28,6 +28,18 @@
             ]
           },
           {
+            "group": "CLI",
+            "pages": [
+              "cli/overview",
+              "cli/installation",
+              "cli/authentication",
+              "cli/commands",
+              "cli/configuration",
+              "cli/pattern-learning",
+              "cli/team-deployment"
+            ]
+          },
+          {
             "group": "Core Concepts",
             "pages": [
               "concepts/architecture",

@@ -1,0 +1,97 @@
+---
+title: 'CLI Overview'
+description: 'Pre-commit credential scanner with AI-powered pattern learning'
+---
+
+## What is Continum CLI?
+
+Continum CLI is a command-line tool that prevents credential leaks before they reach your repository. It integrates seamlessly into your development workflow with a pre-commit hook that scans every commit for sensitive data.
+
+## Two-Layer Protection
+
+### Layer 1: Local Scanner (Instant)
+
+The local scanner runs in milliseconds before your commit completes. It uses pattern matching to catch known credential types instantly.
+
+- **Instant blocking** - Violations stop commits immediately
+- **Works offline** - No network required for scanning
+- **Zero latency** - Runs in milliseconds
+- **Comprehensive patterns** - Detects API keys, tokens, credentials, and more
+
+### Layer 2: Sandbox Audit (Background)
+
+After your commit completes, a copy of the changes is sent to Continum for AI-powered analysis. This catches context-dependent violations that pattern matching might miss.
+
+- **AI-powered detection** - Finds generic credentials with no known pattern
+- **Context analysis** - Understands when data is sensitive based on usage
+- **Fire-and-forget** - Doesn't block your workflow
+- **Team visibility** - Creates signals for review in your dashboard
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Pattern Learning" icon="brain">
+    When the CLI detects an unknown credential pattern, you can approve it once. The pattern syncs to your entire team automatically.
+  </Card>
+  
+  <Card title="Zero Instrumentation" icon="code">
+    Works on any codebase in any language. No code changes required—just install and protect.
+  </Card>
+  
+  <Card title="Team Enforcement" icon="users">
+    Configuration file in your repository ensures every developer has the same protection rules.
+  </Card>
+  
+  <Card title="Comprehensive Coverage" icon="shield-check">
+    Built-in patterns for cloud providers, payment processors, databases, and more.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+1. **Install** the CLI globally on your machine
+2. **Login** to authenticate with your Continum account
+3. **Initialize** in your project to install the pre-commit hook
+4. **Commit normally** - scanning happens automatically
+
+Every commit is scanned before it reaches your repository. Violations are caught instantly, and your team learns from every detection.
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Prevent Credential Leaks">
+    Stop API keys, passwords, and tokens from being committed to your repository. Catch them before they leave your machine.
+  </Accordion>
+  
+  <Accordion title="Team-Wide Protection">
+    Ensure every developer on your team has the same security standards. No manual setup required after initial configuration.
+  </Accordion>
+  
+  <Accordion title="Learn Custom Patterns">
+    Detect company-specific credential formats automatically. The CLI learns from your approvals and shares patterns across your team.
+  </Accordion>
+  
+  <Accordion title="Compliance Requirements">
+    Meet security compliance requirements by preventing sensitive data from entering version control.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/cli/installation">
+    Install the CLI and get started in 60 seconds
+  </Card>
+  
+  <Card title="Authentication" icon="key" href="/cli/authentication">
+    Learn how to authenticate with Continum
+  </Card>
+  
+  <Card title="Commands" icon="terminal" href="/cli/commands">
+    Explore all available CLI commands
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Customize scanning behavior for your project
+  </Card>
+</CardGroup>

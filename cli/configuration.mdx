@@ -1,0 +1,341 @@
+---
+title: 'Configuration'
+description: 'Customize Continum CLI scanning behavior for your project'
+---
+
+## Configuration File
+
+The `.continum.json` file controls how the CLI scans your project. It's created automatically when you run `continum init`.
+
+```json .continum.json
+{
+  "scanOnCommit": true,
+  "sandbox": "employee_confidential",
+  "block": ["CRITICAL", "HIGH"],
+  "warn": ["MEDIUM"],
+  "ignore": [
+    ".env.example",
+    "**/*.test.ts",
+    "**/fixtures/**",
+    "**/mocks/**"
+  ],
+  "patterns": {
+    "custom": [
+      "ACME-[0-9]{6}",
+      "internal-project-[a-z]+"
+    ]
+  }
+}
+```
+
+<Info>
+  This file should be committed to your repository so all team members use the same configuration.
+</Info>
+
+---
+
+## Configuration Options
+
+### scanOnCommit
+
+Enable or disable pre-commit scanning.
+
+```json
+{
+  "scanOnCommit": true
+}
+```
+
+**Values:**
+- `true` - Scan files before every commit (default)
+- `false` - Disable automatic scanning
+
+<Warning>
+  Disabling this removes protection from your commits. Only do this temporarily for debugging.
+</Warning>
+
+---
+
+### sandbox
+
+The Continum sandbox to use for background auditing.
+
+```json
+{
+  "sandbox": "employee_confidential"
+}
+```
+
+**Value:** String - Your sandbox slug
+
+This determines where audit results are sent for AI analysis. You can create sandboxes in your dashboard.
+
+---
+
+### block
+
+Risk levels that should block commits.
+
+```json
+{
+  "block": ["CRITICAL", "HIGH"]
+}
+```
+
+**Values:** Array of risk levels
+- `CRITICAL` - Definite credentials (API keys, passwords)
+- `HIGH` - Likely credentials (high-entropy strings in suspicious contexts)
+- `MEDIUM` - Possible credentials (moderate confidence)
+- `LOW` - Low-confidence detections
+
+**Recommended:** `["CRITICAL", "HIGH"]`
+
+---
+
+### warn
+
+Risk levels that show warnings but allow commits.
+
+```json
+{
+  "warn": ["MEDIUM"]
+}
+```
+
+**Values:** Array of risk levels (same as `block`)
+
+Warnings are displayed but don't prevent commits. Useful for gradual rollout or low-confidence patterns.
+
+---
+
+### ignore
+
+Files and patterns to skip during scanning.
+
+```json
+{
+  "ignore": [
+    ".env.example",
+    "**/*.test.ts",
+    "**/fixtures/**",
+    "**/mocks/**",
+    "docs/**"
+  ]
+}
+```
+
+**Values:** Array of glob patterns
+
+Common patterns to ignore:
+- `.env.example` - Example environment files
+- `**/*.test.ts` - Test files
+- `**/fixtures/**` - Test fixtures
+- `**/mocks/**` - Mock data
+- `**/*.md` - Documentation files
+
+<Tip>
+  Use glob patterns for flexible matching. `**` matches any directory depth.
+</Tip>
+
+---
+
+### patterns.custom
+
+Custom regex patterns to detect.
+
+```json
+{
+  "patterns": {
+    "custom": [
+      "ACME-[0-9]{6}",
+      "internal-project-[a-z]+",
+      "prod_key_[a-zA-Z0-9]{32}"
+    ]
+  }
+}
+```
+
+**Values:** Array of regex patterns
+
+Add company-specific credential formats that aren't in the built-in patterns.
+
+---
+
+## Built-in Patterns
+
+The CLI ships with patterns for common credential types:
+
+<AccordionGroup>
+  <Accordion title="Cloud Providers">
+    - AWS Access Keys (`AKIA...`)
+    - GCP Service Account JSON
+    - Azure Connection Strings
+    - Digital Ocean Tokens
+  </Accordion>
+  
+  <Accordion title="Payment Processors">
+    - Stripe Keys (`sk_live_...`, `pk_live_...`)
+    - PayPal Client IDs
+    - Square Access Tokens
+  </Accordion>
+  
+  <Accordion title="API Services">
+    - GitHub Personal Access Tokens (`ghp_...`)
+    - Anthropic API Keys (`sk-ant-...`)
+    - OpenAI API Keys (`sk-...`)
+    - SendGrid API Keys
+    - Twilio Auth Tokens
+  </Accordion>
+  
+  <Accordion title="Databases">
+    - PostgreSQL Connection Strings
+    - MySQL Connection Strings
+    - MongoDB Connection Strings
+    - Redis URLs
+  </Accordion>
+  
+  <Accordion title="Private Keys">
+    - PEM Format RSA/EC Keys
+    - SSH Private Keys
+    - JWT Tokens
+  </Accordion>
+  
+  <Accordion title="Personal Data">
+    - NHS Numbers (UK)
+    - National Insurance Numbers (UK)
+    - Email Addresses (in sensitive contexts)
+    - Phone Numbers (in sensitive contexts)
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Example Configurations
+
+### Strict Mode
+
+Block all violations, no warnings:
+
+```json
+{
+  "scanOnCommit": true,
+  "sandbox": "production",
+  "block": ["CRITICAL", "HIGH", "MEDIUM", "LOW"],
+  "warn": [],
+  "ignore": [
+    ".env.example"
+  ]
+}
+```
+
+### Gradual Rollout
+
+Warn on medium/low, block only critical/high:
+
+```json
+{
+  "scanOnCommit": true,
+  "sandbox": "development",
+  "block": ["CRITICAL", "HIGH"],
+  "warn": ["MEDIUM", "LOW"],
+  "ignore": [
+    ".env.example",
+    "**/*.test.ts",
+    "**/fixtures/**"
+  ]
+}
+```
+
+### Development Environment
+
+More lenient for development:
+
+```json
+{
+  "scanOnCommit": true,
+  "sandbox": "dev_sandbox",
+  "block": ["CRITICAL"],
+  "warn": ["HIGH", "MEDIUM"],
+  "ignore": [
+    ".env.example",
+    "**/*.test.ts",
+    "**/fixtures/**",
+    "**/mocks/**",
+    "docs/**",
+    "examples/**"
+  ]
+}
+```
+
+---
+
+## Configuration Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Commit Configuration" icon="code-branch">
+    Always commit `.continum.json` to your repository so all team members use the same rules.
+  </Card>
+  
+  <Card title="Start Strict" icon="shield-check">
+    Begin with `["CRITICAL", "HIGH"]` blocking. Adjust based on false positives.
+  </Card>
+  
+  <Card title="Ignore Test Files" icon="flask">
+    Test files often contain mock credentials. Add them to the ignore list.
+  </Card>
+  
+  <Card title="Document Custom Patterns" icon="book">
+    Add comments in your configuration explaining custom patterns for your team.
+  </Card>
+</CardGroup>
+
+---
+
+## Updating Configuration
+
+After changing `.continum.json`, the changes take effect immediately on the next commit. No need to restart or reinitialize.
+
+```bash
+# Edit configuration
+vim .continum.json
+
+# Test with a commit
+git add .
+git commit -m "test new config"
+```
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Configuration not found">
+    Run `continum init` to create the configuration file.
+  </Accordion>
+  
+  <Accordion title="Changes not taking effect">
+    Ensure `.continum.json` is in your repository root, not a subdirectory.
+  </Accordion>
+  
+  <Accordion title="Too many false positives">
+    Add specific files or patterns to the `ignore` list, or move violations to `warn` instead of `block`.
+  </Accordion>
+  
+  <Accordion title="Invalid JSON">
+    Validate your JSON syntax. Use a JSON validator or your editor's JSON support.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Pattern Learning" icon="brain" href="/cli/pattern-learning">
+    Learn how the CLI detects and learns patterns
+  </Card>
+  
+  <Card title="Team Deployment" icon="users" href="/cli/team-deployment">
+    Deploy configuration to your entire team
+  </Card>
+</CardGroup>

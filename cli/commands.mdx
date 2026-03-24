@@ -1,0 +1,311 @@
+---
+title: 'Commands'
+description: 'Complete reference for all Continum CLI commands'
+---
+
+## Command Overview
+
+The Continum CLI provides several commands for managing credential scanning and pattern detection.
+
+## continum login
+
+Authenticate with your Continum account.
+
+```bash
+continum login
+```
+
+**What it does:**
+- Opens your browser for secure authentication
+- Displays your API key in browser and terminal
+- Saves credentials locally
+- Tests connection to Continum
+
+**You only need to run this once per machine.**
+
+<Info>
+  Your API key is displayed during login. Store it securely for your records.
+</Info>
+
+---
+
+## continum init
+
+Initialize Continum in a project.
+
+```bash
+continum init [options]
+```
+
+**Options:**
+- `--silent` - Non-interactive mode (for automated scripts)
+
+**What it does:**
+- Creates `.continum.json` configuration file
+- Installs pre-commit hook at `.git/hooks/pre-commit`
+- Verifies connection to Continum API
+
+**Requirements:**
+- Must be in a git repository
+- Must be logged in (run `continum login` first)
+
+**Example:**
+```bash
+cd your-project
+continum init
+```
+
+For automated deployment:
+```bash
+continum init --silent
+```
+
+---
+
+## continum scan
+
+Scan files for credentials and sensitive data.
+
+```bash
+continum scan [files...] [options]
+```
+
+**Arguments:**
+- `[files...]` - Specific files to scan (optional)
+
+**Options:**
+- `--staged` - Scan staged files (used by pre-commit hook)
+- `--hook` - Minimal output mode (for git hooks)
+- `--strict` - Block on unknown patterns without prompting
+- `--warn-only` - Show warnings but don't block commits
+
+**Examples:**
+
+Scan specific files:
+```bash
+continum scan src/config.ts src/utils.ts
+```
+
+Scan staged files (used by pre-commit hook):
+```bash
+continum scan --staged
+```
+
+Strict mode (block all unknown patterns):
+```bash
+continum scan --staged --strict
+```
+
+Warn-only mode (never block commits):
+```bash
+continum scan --staged --warn-only
+```
+
+### Scan Results
+
+<Tabs>
+  <Tab title="Clean Commit">
+    ```bash
+    $ git commit -m "add user feature"
+    
+    Continum — scanning 3 files...
+    ✓ Clean
+    
+    [main abc1234] add user feature
+    ```
+    
+    ✅ No violations found. Commit proceeds normally.
+  </Tab>
+  
+  <Tab title="Known Pattern Blocked">
+    ```bash
+    $ git commit -m "add config"
+    
+    Continum — scanning 1 file...
+    
+    ❌  BLOCKED
+    
+    config.ts (line 14)
+    ──────────────────────────────────────────────────────
+    Type:     AWS_ACCESS_KEY
+    Found:    AKIA••••••••7EXAMPLE
+    Severity: CRITICAL
+    
+    Fix these before committing.
+    Override (not recommended): git commit --no-verify
+    ```
+    
+    ❌ Commit blocked. Remove the credential and try again.
+  </Tab>
+  
+  <Tab title="Unknown Pattern Detected">
+    ```bash
+    $ git commit -m "add acme integration"
+    
+    Continum — scanning 1 file...
+    
+    ⚠️  POSSIBLE CREDENTIAL DETECTED
+    
+    config.ts (line 14)
+    ──────────────────────────────────────────────────────
+    Type:    UNKNOWN_PATTERN (HIGH confidence)
+    Found:   acme_prod_x7k9••••••••
+    Pattern: acme_prod_[a-z0-9]{16}
+    
+    This looks like a credential, but it's not in our pattern library.
+    
+    Options:
+      [b] Block this commit
+      [a] Approve pattern and block (will catch in future)
+      [i] Ignore this pattern
+      [c] Continue anyway (not recommended)
+    
+    Choice: a
+    
+    Pattern description: ACME Production API Key
+    Severity level: HIGH
+    
+    ✓ Pattern saved to your library
+    ✓ This pattern will now be caught locally on future commits
+    
+    Commit blocked. Remove the credential and try again.
+    ```
+    
+    The CLI detected a potential credential and you approved it as a real pattern. All team members will now catch this pattern.
+  </Tab>
+</Tabs>
+
+---
+
+## continum patterns
+
+Manage credential patterns.
+
+### Update Patterns
+
+Update patterns from Continum API:
+
+```bash
+continum patterns update
+```
+
+This syncs the latest patterns from your team to your local machine.
+
+### List Patterns
+
+List all available patterns:
+
+```bash
+continum patterns list
+```
+
+Shows all patterns including:
+- Built-in patterns (cloud providers, databases, etc.)
+- Custom patterns approved by your team
+- Pattern type and severity level
+
+---
+
+## continum status
+
+Check Continum configuration and connection.
+
+```bash
+continum status
+```
+
+**Shows:**
+- Git repository status
+- Configuration file location
+- Pre-commit hook status
+- API connection status
+- Your account information
+
+**Example output:**
+```bash
+Continum Status
+───────────────────────────────────────────────────
+
+✓ Git repository detected
+✓ Configuration file: .continum.json
+✓ Pre-commit hook installed
+✓ Connected to Continum API
+✓ Account: Acme Corp (acme@example.com)
+
+Everything looks good!
+```
+
+---
+
+## continum uninstall
+
+Remove Continum pre-commit hook from the repository.
+
+```bash
+continum uninstall
+```
+
+**What it does:**
+- Removes the pre-commit hook
+- Keeps the configuration file (you can delete it manually)
+- Keeps your credentials (for use in other projects)
+
+<Warning>
+  This only removes the hook from the current repository. Your credentials remain for use in other projects.
+</Warning>
+
+---
+
+## Global Options
+
+These options work with any command:
+
+- `--help` - Show help for a command
+- `--version` - Show CLI version
+
+**Examples:**
+```bash
+continum --help
+continum scan --help
+continum --version
+```
+
+---
+
+## Exit Codes
+
+The CLI uses standard exit codes:
+
+- `0` - Success
+- `1` - Error or violations found
+- `2` - Invalid usage
+
+These are useful for CI/CD integration:
+
+```bash
+continum scan --staged
+if [ $? -eq 0 ]; then
+  echo "Scan passed"
+else
+  echo "Scan failed"
+  exit 1
+fi
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Customize scanning behavior
+  </Card>
+  
+  <Card title="Pattern Learning" icon="brain" href="/cli/pattern-learning">
+    Learn how pattern detection works
+  </Card>
+  
+  <Card title="Team Deployment" icon="users" href="/cli/team-deployment">
+    Deploy to your entire team
+  </Card>
+</CardGroup>

@@ -1,0 +1,446 @@
+---
+title: 'Team Deployment'
+description: 'Deploy Continum CLI to your entire development team'
+---
+
+## Overview
+
+Deploying Continum CLI to your team ensures everyone has the same security standards. There are two approaches: manual setup and automated deployment.
+
+## Deployment Options
+
+<CardGroup cols={2}>
+  <Card title="Manual Setup" icon="hand">
+    Each team member installs and configures the CLI individually. Best for small teams or initial testing.
+  </Card>
+  
+  <Card title="Automated Deployment" icon="robot">
+    CLI installs automatically when team members clone and set up the project. Recommended for larger teams.
+  </Card>
+</CardGroup>
+
+---
+
+## Manual Setup
+
+Each team member follows these steps:
+
+<Steps>
+  <Step title="Install CLI Globally">
+    ```bash
+    npm install -g @continum/cli
+    ```
+  </Step>
+  
+  <Step title="Login to Continum">
+    ```bash
+    continum login
+    ```
+    
+    This authenticates with their Continum account. Each developer needs their own account.
+  </Step>
+  
+  <Step title="Clone Project">
+    ```bash
+    git clone <your-repo>
+    cd <your-repo>
+    ```
+  </Step>
+  
+  <Step title="Initialize Continum">
+    ```bash
+    continum init
+    ```
+    
+    This installs the pre-commit hook using the existing `.continum.json` configuration.
+  </Step>
+</Steps>
+
+### Pros and Cons
+
+**Pros:**
+- Simple and straightforward
+- Full control over each installation
+- Easy to troubleshoot
+
+**Cons:**
+- Manual process for each developer
+- Easy to forget or skip
+- No enforcement of installation
+
+---
+
+## Automated Deployment (Recommended)
+
+Automatically install the CLI when developers set up the project.
+
+### Setup
+
+Add to your project's `package.json`:
+
+```json package.json
+{
+  "scripts": {
+    "postinstall": "continum init --silent"
+  },
+  "devDependencies": {
+    "@continum/cli": "^0.1.0"
+  }
+}
+```
+
+### Team Member Workflow
+
+<Steps>
+  <Step title="Install CLI Globally (One Time)">
+    ```bash
+    npm install -g @continum/cli
+    ```
+    
+    This only needs to be done once per machine.
+  </Step>
+  
+  <Step title="Login (One Time)">
+    ```bash
+    continum login
+    ```
+    
+    Authenticate with Continum. Only needed once per machine.
+  </Step>
+  
+  <Step title="Clone and Install">
+    ```bash
+    git clone <your-repo>
+    cd <your-repo>
+    npm install
+    ```
+    
+    The `postinstall` script automatically runs `continum init --silent`, installing the pre-commit hook.
+  </Step>
+</Steps>
+
+### How It Works
+
+1. Developer clones the repository
+2. Developer runs `npm install`
+3. The `postinstall` script runs automatically
+4. `continum init --silent` installs the pre-commit hook
+5. The hook uses the committed `.continum.json` configuration
+6. Developer is protected immediately
+
+<Info>
+  The `--silent` flag makes initialization non-interactive, perfect for automated scripts.
+</Info>
+
+---
+
+## Configuration Management
+
+### Commit Configuration
+
+Always commit `.continum.json` to your repository:
+
+```bash
+git add .continum.json
+git commit -m "Add Continum configuration"
+git push
+```
+
+This ensures all team members use the same scanning rules.
+
+### Update Configuration
+
+When you update `.continum.json`, changes apply to all team members on their next commit:
+
+```bash
+# Update configuration
+vim .continum.json
+
+# Commit and push
+git add .continum.json
+git commit -m "Update Continum config: add test files to ignore"
+git push
+```
+
+Team members get the updated configuration automatically when they pull.
+
+---
+
+## Pattern Syncing
+
+Approved patterns sync automatically across your team:
+
+<Steps>
+  <Step title="Developer Approves Pattern">
+    One team member encounters and approves a new credential pattern.
+  </Step>
+  
+  <Step title="Pattern Saved">
+    The pattern is saved to your Continum account.
+  </Step>
+  
+  <Step title="Automatic Distribution">
+    Other team members receive the pattern automatically on their next scan.
+  </Step>
+  
+  <Step title="Consistent Protection">
+    Everyone now catches this credential type locally.
+  </Step>
+</Steps>
+
+No manual distribution needed—patterns sync automatically.
+
+---
+
+## Onboarding New Developers
+
+### Onboarding Checklist
+
+Provide new team members with this checklist:
+
+<Steps>
+  <Step title="Create Continum Account">
+    Sign up at [app.continum.co](https://app.continum.co)
+  </Step>
+  
+  <Step title="Install CLI">
+    ```bash
+    npm install -g @continum/cli
+    ```
+  </Step>
+  
+  <Step title="Login">
+    ```bash
+    continum login
+    ```
+  </Step>
+  
+  <Step title="Clone and Setup">
+    ```bash
+    git clone <repo-url>
+    cd <repo-name>
+    npm install
+    ```
+  </Step>
+  
+  <Step title="Verify Installation">
+    ```bash
+    continum status
+    ```
+  </Step>
+</Steps>
+
+### Onboarding Documentation
+
+Add this to your team's onboarding docs:
+
+```markdown README.md
+## Security Setup
+
+This project uses Continum CLI to prevent credential leaks.
+
+### First-Time Setup
+
+1. Install Continum CLI globally:
+   ```bash
+   npm install -g @continum/cli
+   ```
+
+2. Login to Continum:
+   ```bash
+   continum login
+   ```
+
+3. Install project dependencies:
+   ```bash
+   npm install
+   ```
+
+The pre-commit hook will be installed automatically. Every commit will be scanned for credentials.
+
+### Verification
+
+Check that everything is working:
+```bash
+continum status
+```
+
+You should see:
+- ✓ Git repository detected
+- ✓ Configuration file found
+- ✓ Pre-commit hook installed
+- ✓ Connected to Continum API
+```
+
+---
+
+## CI/CD Integration
+
+Integrate Continum CLI into your CI/CD pipeline:
+
+<CodeGroup>
+```yaml GitHub Actions
+name: Security Scan
+
+on: [push, pull_request]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      
+      - name: Install Continum CLI
+        run: npm install -g @continum/cli
+      
+      - name: Setup Credentials
+        env:
+          CONTINUM_API_KEY: ${{ secrets.CONTINUM_API_KEY }}
+        run: |
+          mkdir -p ~/.continum
+          echo '{"apiUrl":"https://api.continum.dev","apiKey":"'$CONTINUM_API_KEY'"}' > ~/.continum/credentials.json
+      
+      - name: Initialize Continum
+        run: continum init --silent
+      
+      - name: Scan Files
+        run: continum scan $(git ls-files)
+```
+
+```yaml GitLab CI
+security-scan:
+  stage: test
+  image: node:18
+  script:
+    - npm install -g @continum/cli
+    - mkdir -p ~/.continum
+    - echo '{"apiUrl":"https://api.continum.dev","apiKey":"'$CONTINUM_API_KEY'"}' > ~/.continum/credentials.json
+    - continum init --silent
+    - continum scan $(git ls-files)
+  only:
+    - merge_requests
+    - main
+```
+
+```groovy Jenkins
+pipeline {
+  agent any
+  
+  stages {
+    stage('Security Scan') {
+      steps {
+        sh 'npm install -g @continum/cli'
+        sh 'mkdir -p ~/.continum'
+        sh 'echo \'{"apiUrl":"https://api.continum.dev","apiKey":"\'$CONTINUM_API_KEY\'"}\' > ~/.continum/credentials.json'
+        sh 'continum init --silent'
+        sh 'continum scan $(git ls-files)'
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+<Warning>
+  Store your `CONTINUM_API_KEY` as a secret in your CI/CD platform. Never commit it to your repository.
+</Warning>
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Developer forgot to install CLI">
+    The `postinstall` script will fail silently if the CLI isn't installed globally. Add a check:
+    
+    ```json
+    {
+      "scripts": {
+        "postinstall": "which continum && continum init --silent || echo 'Continum CLI not installed. Run: npm install -g @continum/cli'"
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Developer not logged in">
+    The `init` command will fail if not logged in. Developers need to run `continum login` first.
+  </Accordion>
+  
+  <Accordion title="Hook not running">
+    Verify the hook is installed:
+    ```bash
+    ls -la .git/hooks/pre-commit
+    ```
+    
+    If missing, run:
+    ```bash
+    continum init
+    ```
+  </Accordion>
+  
+  <Accordion title="Different configurations">
+    Ensure `.continum.json` is committed and all developers have pulled the latest version.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Document Requirements" icon="book">
+    Add CLI setup to your project's README and onboarding documentation.
+  </Card>
+  
+  <Card title="Enforce in CI/CD" icon="shield-check">
+    Run scans in your CI/CD pipeline as a backup to local scanning.
+  </Card>
+  
+  <Card title="Regular Updates" icon="arrow-up">
+    Keep the CLI updated to get the latest patterns and features.
+  </Card>
+  
+  <Card title="Team Training" icon="graduation-cap">
+    Train your team on how to handle pattern approvals and false positives.
+  </Card>
+</CardGroup>
+
+---
+
+## Monitoring and Compliance
+
+### Dashboard Visibility
+
+Monitor your team's security posture in the Continum dashboard:
+
+- View all detected violations across your team
+- See which patterns are being caught most frequently
+- Track pattern approvals and who approved them
+- Monitor scan coverage across projects
+
+### Compliance Reporting
+
+Generate compliance reports showing:
+- Number of scans performed
+- Violations caught and prevented
+- Pattern coverage across your organization
+- Team adoption metrics
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Customize scanning behavior
+  </Card>
+  
+  <Card title="Pattern Learning" icon="brain" href="/cli/pattern-learning">
+    Learn how pattern detection works
+  </Card>
+</CardGroup>
