@@ -42,8 +42,8 @@ Each team member follows these steps:
   
   <Step title="Clone Project">
     ```bash
-    git clone <your-repo>
-    cd <your-repo>
+    git clone your-repo
+    cd your-repo
     ```
   </Step>
   
@@ -52,7 +52,7 @@ Each team member follows these steps:
     continum init
     ```
     
-    This installs the pre-commit hook using the existing `.continum.json` configuration.
+    This installs the pre-commit hook using the existing configuration.
   </Step>
 </Steps>
 
@@ -76,9 +76,9 @@ Automatically install the CLI when developers set up the project.
 
 ### Setup
 
-Add to your project's `package.json`:
+Add to your project's package.json:
 
-```json package.json
+```json
 {
   "scripts": {
     "postinstall": "continum init --silent"
@@ -110,26 +110,26 @@ Add to your project's `package.json`:
   
   <Step title="Clone and Install">
     ```bash
-    git clone <your-repo>
-    cd <your-repo>
+    git clone your-repo
+    cd your-repo
     npm install
     ```
     
-    The `postinstall` script automatically runs `continum init --silent`, installing the pre-commit hook.
+    The postinstall script automatically runs continum init, installing the pre-commit hook.
   </Step>
 </Steps>
 
 ### How It Works
 
 1. Developer clones the repository
-2. Developer runs `npm install`
-3. The `postinstall` script runs automatically
-4. `continum init --silent` installs the pre-commit hook
-5. The hook uses the committed `.continum.json` configuration
+2. Developer runs npm install
+3. The postinstall script runs automatically
+4. continum init installs the pre-commit hook
+5. The hook uses the committed configuration
 6. Developer is protected immediately
 
 <Info>
-  The `--silent` flag makes initialization non-interactive, perfect for automated scripts.
+  The silent flag makes initialization non-interactive, perfect for automated scripts.
 </Info>
 
 ---
@@ -138,7 +138,7 @@ Add to your project's `package.json`:
 
 ### Commit Configuration
 
-Always commit `.continum.json` to your repository:
+Always commit your configuration to your repository:
 
 ```bash
 git add .continum.json
@@ -150,15 +150,12 @@ This ensures all team members use the same scanning rules.
 
 ### Update Configuration
 
-When you update `.continum.json`, changes apply to all team members on their next commit:
+When you update configuration, changes apply to all team members on their next commit:
 
 ```bash
-# Update configuration
 vim .continum.json
-
-# Commit and push
 git add .continum.json
-git commit -m "Update Continum config: add test files to ignore"
+git commit -m "Update Continum config"
 git push
 ```
 
@@ -200,7 +197,7 @@ Provide new team members with this checklist:
 
 <Steps>
   <Step title="Create Continum Account">
-    Sign up at [app.continum.co](https://app.continum.co)
+    Sign up at app.continum.co
   </Step>
   
   <Step title="Install CLI">
@@ -217,8 +214,8 @@ Provide new team members with this checklist:
   
   <Step title="Clone and Setup">
     ```bash
-    git clone <repo-url>
-    cd <repo-name>
+    git clone repo-url
+    cd repo-name
     npm install
     ```
   </Step>
@@ -230,124 +227,42 @@ Provide new team members with this checklist:
   </Step>
 </Steps>
 
-### Onboarding Documentation
-
-Add this to your team's onboarding docs:
-
-```markdown README.md
-## Security Setup
-
-This project uses Continum CLI to prevent credential leaks.
-
-### First-Time Setup
-
-1. Install Continum CLI globally:
-   ```bash
-   npm install -g @continum/cli
-   ```
-
-2. Login to Continum:
-   ```bash
-   continum login
-   ```
-
-3. Install project dependencies:
-   ```bash
-   npm install
-   ```
-
-The pre-commit hook will be installed automatically. Every commit will be scanned for credentials.
-
-### Verification
-
-Check that everything is working:
-```bash
-continum status
-```
-
-You should see:
-- ✓ Git repository detected
-- ✓ Configuration file found
-- ✓ Pre-commit hook installed
-- ✓ Connected to Continum API
-```
-
 ---
 
 ## CI/CD Integration
 
-Integrate Continum CLI into your CI/CD pipeline:
+Integrate Continum CLI into your CI/CD pipeline.
 
-<CodeGroup>
-```yaml GitHub Actions
+### GitHub Actions
+
+```yaml
 name: Security Scan
-
 on: [push, pull_request]
-
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '18'
-      
       - name: Install Continum CLI
         run: npm install -g @continum/cli
-      
       - name: Setup Credentials
         env:
           CONTINUM_API_KEY: ${{ secrets.CONTINUM_API_KEY }}
         run: |
           mkdir -p ~/.continum
           echo '{"apiUrl":"https://api.continum.dev","apiKey":"'$CONTINUM_API_KEY'"}' > ~/.continum/credentials.json
-      
       - name: Initialize Continum
         run: continum init --silent
-      
       - name: Scan Files
         run: continum scan $(git ls-files)
 ```
 
-```yaml GitLab CI
-security-scan:
-  stage: test
-  image: node:18
-  script:
-    - npm install -g @continum/cli
-    - mkdir -p ~/.continum
-    - echo '{"apiUrl":"https://api.continum.dev","apiKey":"'$CONTINUM_API_KEY'"}' > ~/.continum/credentials.json
-    - continum init --silent
-    - continum scan $(git ls-files)
-  only:
-    - merge_requests
-    - main
-```
-
-```groovy Jenkins
-pipeline {
-  agent any
-  
-  stages {
-    stage('Security Scan') {
-      steps {
-        sh 'npm install -g @continum/cli'
-        sh 'mkdir -p ~/.continum'
-        sh 'echo \'{"apiUrl":"https://api.continum.dev","apiKey":"\'$CONTINUM_API_KEY\'"}\' > ~/.continum/credentials.json'
-        sh 'continum init --silent'
-        sh 'continum scan $(git ls-files)'
-      }
-    }
-  }
-}
-```
-</CodeGroup>
-
 <Warning>
-  Store your `CONTINUM_API_KEY` as a secret in your CI/CD platform. Never commit it to your repository.
+Store your CONTINUM_API_KEY as a secret in your CI/CD platform. Never commit it to your repository.
 </Warning>
 
 ---
@@ -356,35 +271,19 @@ pipeline {
 
 <AccordionGroup>
   <Accordion title="Developer forgot to install CLI">
-    The `postinstall` script will fail silently if the CLI isn't installed globally. Add a check:
-    
-    ```json
-    {
-      "scripts": {
-        "postinstall": "which continum && continum init --silent || echo 'Continum CLI not installed. Run: npm install -g @continum/cli'"
-      }
-    }
-    ```
+    The postinstall script will fail silently if the CLI is not installed globally. Add a check to your postinstall script.
   </Accordion>
   
   <Accordion title="Developer not logged in">
-    The `init` command will fail if not logged in. Developers need to run `continum login` first.
+    The init command will fail if not logged in. Developers need to run continum login first.
   </Accordion>
   
   <Accordion title="Hook not running">
-    Verify the hook is installed:
-    ```bash
-    ls -la .git/hooks/pre-commit
-    ```
-    
-    If missing, run:
-    ```bash
-    continum init
-    ```
+    Verify the hook is installed by checking the git hooks directory. If missing, run continum init.
   </Accordion>
   
   <Accordion title="Different configurations">
-    Ensure `.continum.json` is committed and all developers have pulled the latest version.
+    Ensure the configuration file is committed and all developers have pulled the latest version.
   </Accordion>
 </AccordionGroup>
 
@@ -394,7 +293,7 @@ pipeline {
 
 <CardGroup cols={2}>
   <Card title="Document Requirements" icon="book">
-    Add CLI setup to your project's README and onboarding documentation.
+    Add CLI setup to your project README and onboarding documentation.
   </Card>
   
   <Card title="Enforce in CI/CD" icon="shield-check">
@@ -409,27 +308,6 @@ pipeline {
     Train your team on how to handle pattern approvals and false positives.
   </Card>
 </CardGroup>
-
----
-
-## Monitoring and Compliance
-
-### Dashboard Visibility
-
-Monitor your team's security posture in the Continum dashboard:
-
-- View all detected violations across your team
-- See which patterns are being caught most frequently
-- Track pattern approvals and who approved them
-- Monitor scan coverage across projects
-
-### Compliance Reporting
-
-Generate compliance reports showing:
-- Number of scans performed
-- Violations caught and prevented
-- Pattern coverage across your organization
-- Team adoption metrics
 
 ---
 
