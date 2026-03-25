@@ -1,0 +1,547 @@
+---
+title: "Vision & Multimodal"
+description: "Work with images, video, and audio using Continum SDK"
+---
+
+## Overview
+
+Modern LLMs support multimodal inputs, allowing you to process images, videos, and audio alongside text. The Continum SDK provides a unified interface for all providers.
+
+## Supported Capabilities
+
+| Provider | Images | Video | Audio | Documents |
+|----------|--------|-------|-------|-----------|
+| OpenAI | ✅ GPT-4o, GPT-5 | ❌ | ❌ | ❌ |
+| Anthropic | ✅ All models | ❌ | ❌ | ❌ |
+| Gemini | ✅ All models | ✅ Pro models | ✅ Pro models | ✅ Pro models |
+
+## Image Analysis
+
+### Basic Image Input
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  apiKeys: {
+    openai: process.env.OPENAI_API_KEY
+  }
+});
+
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'What is in this image?' },
+      { 
+        type: 'image_url',
+        image_url: {
+          url: 'https://example.com/image.jpg'
+        }
+      }
+    ]
+  }]
+});
+
+console.log(response.content);
+```
+
+### Multiple Images
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Compare these two images and describe the differences.' },
+      { type: 'image_url', image_url: { url: 'https://example.com/image1.jpg' } },
+      { type: 'image_url', image_url: { url: 'https://example.com/image2.jpg' } }
+    ]
+  }]
+});
+```
+
+### Base64 Encoded Images
+
+```typescript
+import fs from 'fs';
+
+// Read image file
+const imageBuffer = fs.readFileSync('./image.jpg');
+const base64Image = imageBuffer.toString('base64');
+
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Describe this image.' },
+      { 
+        type: 'image_url',
+        image_url: {
+          url: `data:image/jpeg;base64,${base64Image}`
+        }
+      }
+    ]
+  }]
+});
+```
+
+## Provider-Specific Examples
+
+### OpenAI Vision
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Extract all text from this image.' },
+      { 
+        type: 'image_url',
+        image_url: {
+          url: 'https://example.com/document.jpg',
+          detail: 'high'  // Options: 'low', 'high', 'auto'
+        }
+      }
+    ]
+  }]
+});
+```
+
+**Detail Levels**:
+- `low`: Faster, cheaper, less detailed (512x512)
+- `high`: Slower, more expensive, more detailed (2048x2048)
+- `auto`: Automatically choose based on image
+
+### Anthropic Vision
+
+```typescript
+const response = await continum.llm.anthropic.opus_4_6.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Analyze this chart and extract key insights.' },
+      { 
+        type: 'image',
+        source: {
+          type: 'url',
+          url: 'https://example.com/chart.png'
+        }
+      }
+    ]
+  }]
+});
+```
+
+With base64:
+
+```typescript
+const response = await continum.llm.anthropic.sonnet_4_6.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Describe this image.' },
+      { 
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: 'image/jpeg',
+          data: base64Image
+        }
+      }
+    ]
+  }]
+});
+```
+
+### Gemini Vision
+
+```typescript
+const response = await continum.llm.gemini.gemini_2_5_pro.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'What objects are in this image?' },
+      { 
+        type: 'image_url',
+        image_url: {
+          url: 'https://example.com/scene.jpg'
+        }
+      }
+    ]
+  }]
+});
+```
+
+## Video Analysis (Gemini Only)
+
+```typescript
+const response = await continum.llm.gemini.gemini_2_5_pro.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Summarize what happens in this video.' },
+      { 
+        type: 'video_url',
+        video_url: {
+          url: 'https://example.com/video.mp4'
+        }
+      }
+    ]
+  }]
+});
+```
+
+### Video with Timestamps
+
+```typescript
+const response = await continum.llm.gemini.gemini_2_5_pro.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { 
+        type: 'text', 
+        text: 'Describe what happens at each major scene change. Include timestamps.' 
+      },
+      { 
+        type: 'video_url',
+        video_url: {
+          url: 'https://example.com/lecture.mp4'
+        }
+      }
+    ]
+  }]
+});
+```
+
+## Audio Processing (Gemini Only)
+
+```typescript
+const response = await continum.llm.gemini.gemini_2_5_pro.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Transcribe this audio and summarize the key points.' },
+      { 
+        type: 'audio_url',
+        audio_url: {
+          url: 'https://example.com/podcast.mp3'
+        }
+      }
+    ]
+  }]
+});
+```
+
+## Common Use Cases
+
+### OCR (Optical Character Recognition)
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { 
+        type: 'text', 
+        text: 'Extract all text from this image and format it as markdown.' 
+      },
+      { type: 'image_url', image_url: { url: 'https://example.com/document.jpg' } }
+    ]
+  }]
+});
+```
+
+### Chart Analysis
+
+```typescript
+const response = await continum.llm.anthropic.opus_4_6.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { 
+        type: 'text', 
+        text: 'Analyze this sales chart. What are the trends and key insights?' 
+      },
+      { 
+        type: 'image',
+        source: {
+          type: 'url',
+          url: 'https://example.com/sales-chart.png'
+        }
+      }
+    ]
+  }]
+});
+```
+
+### Product Image Analysis
+
+```typescript
+const response = await continum.llm.gemini.gemini_2_5_pro.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { 
+        type: 'text', 
+        text: 'Describe this product in detail. Include color, style, and potential use cases.' 
+      },
+      { type: 'image_url', image_url: { url: 'https://example.com/product.jpg' } }
+    ]
+  }]
+});
+```
+
+### Screenshot Analysis
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { 
+        type: 'text', 
+        text: 'This is a screenshot of a website. Describe the layout and suggest improvements.' 
+      },
+      { type: 'image_url', image_url: { url: 'https://example.com/screenshot.png' } }
+    ]
+  }]
+});
+```
+
+### Medical Image Analysis
+
+```typescript
+const response = await continum.llm.anthropic.opus_4_6.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { 
+        type: 'text', 
+        text: 'Analyze this X-ray image. Note: This is for educational purposes only.' 
+      },
+      { 
+        type: 'image',
+        source: {
+          type: 'url',
+          url: 'https://example.com/xray.jpg'
+        }
+      }
+    ]
+  }],
+  systemPrompt: 'You are a medical imaging assistant. Always include disclaimers about seeking professional medical advice.'
+});
+```
+
+## Advanced Techniques
+
+### Image + Context
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'This is a photo from my vacation in Paris.' },
+      { type: 'image_url', image_url: { url: 'https://example.com/paris.jpg' } },
+      { type: 'text', text: 'What famous landmark is this? Tell me about its history.' }
+    ]
+  }]
+});
+```
+
+### Multi-turn with Images
+
+```typescript
+// First turn
+const response1 = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'What is in this image?' },
+      { type: 'image_url', image_url: { url: 'https://example.com/image.jpg' } }
+    ]
+  }]
+});
+
+// Second turn (follow-up)
+const response2 = await continum.llm.openai.gpt_4o.chat({
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'What is in this image?' },
+        { type: 'image_url', image_url: { url: 'https://example.com/image.jpg' } }
+      ]
+    },
+    {
+      role: 'assistant',
+      content: response1.content
+    },
+    {
+      role: 'user',
+      content: 'Can you describe the colors in more detail?'
+    }
+  ]
+});
+```
+
+### Batch Image Processing
+
+```typescript
+const imageUrls = [
+  'https://example.com/image1.jpg',
+  'https://example.com/image2.jpg',
+  'https://example.com/image3.jpg'
+];
+
+const results = await Promise.all(
+  imageUrls.map(url =>
+    continum.llm.openai.gpt_4o.chat({
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Describe this image in one sentence.' },
+          { type: 'image_url', image_url: { url } }
+        ]
+      }]
+    })
+  )
+);
+
+results.forEach((result, i) => {
+  console.log(`Image ${i + 1}: ${result.content}`);
+});
+```
+
+## Best Practices
+
+### 1. Optimize Image Size
+
+```typescript
+// For faster processing and lower costs
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Quick description needed.' },
+      { 
+        type: 'image_url',
+        image_url: {
+          url: 'https://example.com/image.jpg',
+          detail: 'low'  // Faster and cheaper
+        }
+      }
+    ]
+  }]
+});
+```
+
+### 2. Provide Clear Instructions
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { 
+        type: 'text', 
+        text: 'Extract the following from this receipt: date, total amount, merchant name, and items purchased. Format as JSON.' 
+      },
+      { type: 'image_url', image_url: { url: 'https://example.com/receipt.jpg' } }
+    ]
+  }]
+});
+```
+
+### 3. Handle Errors Gracefully
+
+```typescript
+try {
+  const response = await continum.llm.openai.gpt_4o.chat({
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Describe this image.' },
+        { type: 'image_url', image_url: { url: imageUrl } }
+      ]
+    }]
+  });
+} catch (error) {
+  if (error.message.includes('invalid_image')) {
+    console.error('Image format not supported or image is corrupted');
+  } else if (error.message.includes('image_too_large')) {
+    console.error('Image exceeds size limit');
+  } else {
+    console.error('Vision error:', error.message);
+  }
+}
+```
+
+### 4. Consider Privacy
+
+```typescript
+// For sensitive images, ensure Guardian is enabled
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'Analyze this document but redact any personal information.' },
+      { type: 'image_url', image_url: { url: 'https://example.com/document.jpg' } }
+    ]
+  }]
+});
+// Guardian will scan for PII in the response
+```
+
+## Limitations
+
+### Image Size Limits
+
+| Provider | Max Size | Max Dimensions | Supported Formats |
+|----------|----------|----------------|-------------------|
+| OpenAI | 20 MB | 2048x2048 (high detail) | PNG, JPEG, WEBP, GIF |
+| Anthropic | 5 MB | 8000x8000 | PNG, JPEG, WEBP, GIF |
+| Gemini | 20 MB | No limit | PNG, JPEG, WEBP, GIF, BMP |
+
+### Video Limits (Gemini)
+
+- Max duration: 1 hour
+- Max size: 2 GB
+- Formats: MP4, MOV, AVI, FLV, MPG, WEBM, WMV, 3GPP
+
+### Audio Limits (Gemini)
+
+- Max duration: 9.5 hours
+- Max size: 2 GB
+- Formats: MP3, WAV, FLAC, AAC, OGG, OPUS
+
+## Pricing Considerations
+
+Vision capabilities typically cost more than text-only:
+
+- **OpenAI GPT-4o**: ~$0.01 per image (high detail)
+- **Anthropic Claude**: Included in token pricing
+- **Gemini**: Included in token pricing
+
+<Tip>
+  Use `detail: 'low'` for OpenAI when high resolution isn't needed to reduce costs.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Streaming" icon="water" href="/sdk/streaming">
+    Stream responses in real-time
+  </Card>
+  <Card title="OpenAI Integration" icon="https://cdn.simpleicons.org/openai" href="/sdk/openai">
+    OpenAI-specific features
+  </Card>
+  <Card title="Anthropic Integration" icon="https://cdn.simpleicons.org/anthropic" href="/sdk/anthropic">
+    Claude-specific features
+  </Card>
+  <Card title="Gemini Integration" icon="https://cdn.simpleicons.org/googlegemini" href="/sdk/gemini">
+    Gemini-specific features
+  </Card>
+</CardGroup>

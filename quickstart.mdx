@@ -82,12 +82,15 @@ const continum = new Continum({
   anthropicKey: process.env.ANTHROPIC_API_KEY
 });
 
-const response = await continum.llm.claude.opus_4.chat({
+// Use model family names (recommended)
+const response = await continum.llm.claude.opus_4_6.chat({
   messages: [
     { role: 'user', content: 'What is the capital of France?' }
   ],
   sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
 });
+// Supported: opus_4_6, sonnet_4_6, sonnet_4, haiku_4_5, haiku_3_5, sonnet_3_7
+// Legacy: claude_3_5_sonnet also works (v0.0.4+)
 
 console.log(response.content);
 ```
@@ -100,12 +103,13 @@ const continum = new Continum({
   geminiKey: process.env.GEMINI_API_KEY
 });
 
-const response = await continum.llm.gemini.pro_2_0.chat({
+const response = await continum.llm.gemini.gemini_2_5_pro.chat({
   messages: [
     { role: 'user', content: 'What is the capital of France?' }
   ],
   sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
 });
+// Supported: gemini_2_5_pro, gemini_2_5_flash, gemini_2_0_flash, gemini_1_5_pro
 
 console.log(response.content);
 ```

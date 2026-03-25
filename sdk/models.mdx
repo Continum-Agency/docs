@@ -1,0 +1,344 @@
+---
+title: "Model Names"
+description: "Complete guide to model naming in Continum SDK"
+---
+
+## SDK Version
+
+**Current Version**: 0.0.5
+
+**Latest Changes (v0.0.5)**:
+- Fixed `max_tokens` validation for thinking models (Opus, Sonnet 4)
+- Thinking budget set to 1000 tokens (reduced from 8000)
+- SDK automatically adjusts `max_tokens` if too low (sets to 3048)
+- Better handling of token limits for thinking models
+
+**Previous Changes (v0.0.4)**:
+- Added support for legacy `claude_3_5_sonnet` format
+- Fixed model name transformation bug
+- All Anthropic model formats now supported
+
+## Model Naming Philosophy
+
+The Continum SDK uses **snake_case** model names that automatically transform to the correct API format. This provides:
+
+- **Consistent interface** across all providers
+- **Perfect autocomplete** in your IDE
+- **No typos** from manual string entry
+- **Version management** handled automatically
+
+Think of it like Next.js for AI - a clean, structured interface over raw APIs.
+
+## Anthropic (Claude) Models
+
+### Recommended Format
+
+Use model family names without the `claude-` prefix:
+
+```typescript
+// Claude 4 Series
+continum.llm.anthropic.opus_4_6.chat()    // → claude-opus-4-6
+continum.llm.anthropic.sonnet_4_6.chat()  // → claude-sonnet-4-6
+continum.llm.anthropic.sonnet_4.chat()    // → claude-sonnet-4-5
+continum.llm.anthropic.haiku_4_5.chat()   // → claude-haiku-4-5-20251001
+
+// Claude 3 Series
+continum.llm.anthropic.haiku_3_5.chat()   // → claude-3-5-haiku-20241022
+continum.llm.anthropic.sonnet_3_7.chat()  // → claude-sonnet-3-7-20250219
+```
+
+### Legacy Format (v0.0.4+)
+
+For backward compatibility, the full model name with `claude-` prefix is also supported:
+
+```typescript
+continum.llm.anthropic.claude_3_5_sonnet.chat()  // → claude-3-5-sonnet-20241022
+```
+
+<Warning>
+  The legacy format is supported but not recommended. Use the family name format (`sonnet_3_7`) for better consistency.
+</Warning>
+
+### Provider Alias
+
+Both `anthropic` and `claude` work identically:
+
+```typescript
+continum.llm.anthropic.opus_4_6.chat()  // ✅ Works
+continum.llm.claude.opus_4_6.chat()     // ✅ Also works (same thing)
+```
+
+### Complete Anthropic Model List
+
+| Snake Case | API Model ID | Version Date |
+|------------|--------------|--------------|
+| `opus_4_6` | `claude-opus-4-6` | Latest |
+| `sonnet_4_6` | `claude-sonnet-4-6` | Latest |
+| `sonnet_4` | `claude-sonnet-4-5` | Latest |
+| `haiku_4_5` | `claude-haiku-4-5-20251001` | 2025-10-01 |
+| `haiku_3_5` | `claude-3-5-haiku-20241022` | 2024-10-22 |
+| `sonnet_3_7` | `claude-sonnet-3-7-20250219` | 2025-02-19 |
+| `claude_3_5_sonnet` | `claude-3-5-sonnet-20241022` | 2024-10-22 (legacy) |
+
+## OpenAI Models
+
+OpenAI models use simple snake_case names:
+
+```typescript
+// GPT Series
+continum.llm.openai.gpt_5.chat()       // → gpt-5
+continum.llm.openai.gpt_4o.chat()      // → gpt-4o
+continum.llm.openai.gpt_4_turbo.chat() // → gpt-4-turbo
+
+// Reasoning Models
+continum.llm.openai.o3.chat()          // → o3
+continum.llm.openai.o3_mini.chat()     // → o3-mini
+continum.llm.openai.o1.chat()          // → o1
+```
+
+### Complete OpenAI Model List
+
+| Snake Case | API Model ID | Notes |
+|------------|--------------|-------|
+| `gpt_5` | `gpt-5` | Latest flagship |
+| `gpt_4o` | `gpt-4o` | Multimodal |
+| `gpt_4_turbo` | `gpt-4-turbo` | Fast variant |
+| `o3` | `o3` | Advanced reasoning |
+| `o3_mini` | `o3-mini` | Efficient reasoning |
+| `o1` | `o1` | Reasoning model |
+
+## Gemini Models
+
+Gemini models use the full name with underscores:
+
+```typescript
+// Gemini 2.5 Series
+continum.llm.gemini.gemini_2_5_pro.chat()   // → gemini-2.5-pro
+continum.llm.gemini.gemini_2_5_flash.chat() // → gemini-2.5-flash
+
+// Gemini 2.0 Series
+continum.llm.gemini.gemini_2_0_flash.chat() // → gemini-2.0-flash
+
+// Gemini 1.5 Series
+continum.llm.gemini.gemini_1_5_pro.chat()   // → gemini-1.5-pro
+```
+
+### Complete Gemini Model List
+
+| Snake Case | API Model ID | Notes |
+|------------|--------------|-------|
+| `gemini_2_5_pro` | `gemini-2.5-pro` | Most capable |
+| `gemini_2_5_flash` | `gemini-2.5-flash` | Fast variant |
+| `gemini_2_0_flash` | `gemini-2.0-flash` | Previous gen |
+| `gemini_1_5_pro` | `gemini-1.5-pro` | Legacy |
+
+## Usage Examples
+
+### Basic Usage
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  apiKeys: {
+    openai: process.env.OPENAI_API_KEY,
+    anthropic: process.env.ANTHROPIC_API_KEY,
+    gemini: process.env.GEMINI_API_KEY
+  },
+  defaultSandbox: 'your-sandbox-slug'
+});
+
+// OpenAI
+const response1 = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+
+// Anthropic (recommended format)
+const response2 = await continum.llm.anthropic.opus_4_6.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+
+// Anthropic (legacy format - also works)
+const response3 = await continum.llm.anthropic.claude_3_5_sonnet.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+
+// Gemini
+const response4 = await continum.llm.gemini.gemini_2_5_pro.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+```
+
+### Switching Models
+
+```typescript
+// Easy to switch between models
+const models = [
+  continum.llm.openai.gpt_4o,
+  continum.llm.anthropic.opus_4_6,
+  continum.llm.gemini.gemini_2_5_pro
+];
+
+for (const model of models) {
+  const response = await model.chat({
+    messages: [{ role: 'user', content: 'Test' }]
+  });
+  console.log(response.content);
+}
+```
+
+### Dynamic Model Selection
+
+```typescript
+function getModel(provider: string, modelName: string) {
+  return continum.llm[provider][modelName];
+}
+
+// Use dynamically
+const model = getModel('anthropic', 'opus_4_6');
+const response = await model.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+```
+
+## Model Capabilities
+
+### Thinking Models
+
+These models support extended reasoning with thinking blocks:
+
+```typescript
+// OpenAI reasoning models
+continum.llm.openai.o3.chat()
+continum.llm.openai.o3_mini.chat()
+continum.llm.openai.o1.chat()
+
+// Anthropic Opus and Sonnet 4
+continum.llm.anthropic.opus_4_6.chat()
+continum.llm.anthropic.sonnet_4_6.chat()
+continum.llm.anthropic.sonnet_4.chat()
+```
+
+The SDK automatically enables thinking for these models and captures the reasoning in `response.thinkingBlock`.
+
+### Vision Models
+
+All recent models support vision:
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'What is in this image?' },
+      { type: 'image_url', image_url: 'https://example.com/image.jpg' }
+    ]
+  }]
+});
+```
+
+### Streaming Support
+
+All models support streaming:
+
+```typescript
+const stream = await continum.llm.anthropic.opus_4_6.chat({
+  messages: [{ role: 'user', content: 'Write a story' }],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content);
+}
+```
+
+## Troubleshooting
+
+### Model Not Found Error
+
+```
+Error: Anthropic error 404: {"type":"error","error":{"type":"not_found_error","message":"model: claude-claude-3-5-sonnet"}}
+```
+
+**Cause**: Using `claude_3_5_sonnet` with SDK version < 0.0.4
+
+**Solution**: Upgrade to SDK v0.0.4 or use recommended format:
+
+```typescript
+// ❌ Old SDK versions
+continum.llm.anthropic.claude_3_5_sonnet.chat()
+
+// ✅ Recommended (all versions)
+continum.llm.anthropic.sonnet_3_7.chat()
+
+// ✅ Also works (v0.0.4+)
+continum.llm.anthropic.claude_3_5_sonnet.chat()
+```
+
+### Invalid Model Name
+
+```
+Error: Model "opus-4-6" not found
+```
+
+**Cause**: Using hyphens instead of underscores
+
+**Solution**: Use underscores in model names:
+
+```typescript
+// ❌ Wrong
+continum.llm.anthropic.opus-4-6.chat()
+
+// ✅ Correct
+continum.llm.anthropic.opus_4_6.chat()
+```
+
+### Provider Not Configured
+
+```
+Error: Anthropic API key required for this call
+```
+
+**Solution**: Add the provider's API key to configuration:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  apiKeys: {
+    anthropic: process.env.ANTHROPIC_API_KEY  // Add this
+  }
+});
+```
+
+## Version History
+
+### v0.0.4 (Current)
+- ✅ Added support for `claude_3_5_sonnet` legacy format
+- ✅ Fixed double-prefix bug in model name transformation
+- ✅ All Anthropic model formats now supported
+
+### v0.0.3
+- Model family names only (opus_4_6, sonnet_4, etc.)
+- Legacy format not supported
+
+### v0.0.2
+- Initial model naming system
+- Basic provider support
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/sdk/configuration">
+    Learn about SDK configuration options
+  </Card>
+  <Card title="Streaming" icon="water" href="/sdk/streaming">
+    Stream responses from LLMs
+  </Card>
+  <Card title="Vision" icon="eye" href="/sdk/vision">
+    Use vision models with images
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore the REST API
+  </Card>
+</CardGroup>

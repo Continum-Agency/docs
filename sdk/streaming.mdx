@@ -1,0 +1,518 @@
+---
+title: "Streaming Responses"
+description: "Stream LLM responses in real-time with Continum SDK"
+---
+
+## Overview
+
+Streaming allows you to receive LLM responses incrementally as they're generated, providing a better user experience for long-form content.
+
+## Basic Streaming
+
+All providers support streaming through the `stream: true` parameter:
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  apiKeys: {
+    openai: process.env.OPENAI_API_KEY
+  }
+});
+
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [
+    { role: 'user', content: 'Write a long story about a robot.' }
+  ],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content);
+}
+```
+
+## Provider-Specific Examples
+
+### OpenAI Streaming
+
+```typescript
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [
+    { role: 'system', content: 'You are a creative writer.' },
+    { role: 'user', content: 'Write a poem about the ocean.' }
+  ],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  if (chunk.content) {
+    process.stdout.write(chunk.content);
+  }
+}
+```
+
+### Anthropic Streaming
+
+```typescript
+const stream = await continum.llm.anthropic.opus_4_6.chat({
+  messages: [
+    { role: 'user', content: 'Explain quantum computing in detail.' }
+  ],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  if (chunk.content) {
+    process.stdout.write(chunk.content);
+  }
+}
+```
+
+### Gemini Streaming
+
+```typescript
+const stream = await continum.llm.gemini.gemini_2_5_pro.chat({
+  messages: [
+    { role: 'user', content: 'Describe the history of the internet.' }
+  ],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  if (chunk.content) {
+    process.stdout.write(chunk.content);
+  }
+}
+```
+
+## Web Application Integration
+
+### Express.js
+
+```typescript
+import express from 'express';
+import { Continum } from '@continum/sdk';
+
+const app = express();
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  apiKeys: { openai: process.env.OPENAI_API_KEY }
+});
+
+app.get('/stream', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const stream = await continum.llm.openai.gpt_4o.chat({
+    messages: [
+      { role: 'user', content: req.query.prompt }
+    ],
+    stream: true
+  });
+
+  for await (const chunk of stream) {
+    res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
+  }
+
+  res.write('data: [DONE]\n\n');
+  res.end();
+});
+
+app.listen(3000);
+```
+
+### Next.js App Router
+
+```typescript
+// app/api/stream/route.ts
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY }
+});
+
+export async function POST(req: Request) {
+  const { prompt } = await req.json();
+
+  const stream = await continum.llm.openai.gpt_4o.chat({
+    messages: [{ role: 'user', content: prompt }],
+    stream: true
+  });
+
+  const encoder = new TextEncoder();
+  const readable = new ReadableStream({
+    async start(controller) {
+      for await (const chunk of stream) {
+        controller.enqueue(encoder.encode(chunk.content));
+      }
+      controller.close();
+    }
+  });
+
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Transfer-Encoding': 'chunked'
+    }
+  });
+}
+```
+
+### React Client
+
+```typescript
+'use client';
+
+import { useState } from 'react';
+
+export default function StreamingChat() {
+  const [response, setResponse] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (prompt: string) => {
+    setLoading(true);
+    setResponse('');
+
+    const res = await fetch('/api/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+
+    const reader = res.body?.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader!.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      setResponse(prev => prev + chunk);
+    }
+
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <button onClick={() => handleSubmit('Tell me a story')}>
+        Generate Story
+      </button>
+      <div>{response}</div>
+    </div>
+  );
+}
+```
+
+## Advanced Streaming
+
+### With Token Counting
+
+```typescript
+let totalTokens = 0;
+
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Write a long essay.' }],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content);
+  
+  // Estimate tokens (rough approximation)
+  totalTokens += chunk.content.split(/\s+/).length;
+}
+
+console.log(`\n\nEstimated tokens: ${totalTokens}`);
+```
+
+### With Error Handling
+
+```typescript
+try {
+  const stream = await continum.llm.openai.gpt_4o.chat({
+    messages: [{ role: 'user', content: 'Generate content.' }],
+    stream: true
+  });
+
+  for await (const chunk of stream) {
+    process.stdout.write(chunk.content);
+  }
+} catch (error) {
+  if (error.message.includes('rate_limit')) {
+    console.error('Rate limit exceeded, please retry later');
+  } else if (error.message.includes('timeout')) {
+    console.error('Stream timed out');
+  } else {
+    console.error('Streaming error:', error.message);
+  }
+}
+```
+
+### With Cancellation
+
+```typescript
+const controller = new AbortController();
+
+// Cancel after 10 seconds
+setTimeout(() => controller.abort(), 10000);
+
+try {
+  const stream = await continum.llm.openai.gpt_4o.chat({
+    messages: [{ role: 'user', content: 'Write forever.' }],
+    stream: true,
+    signal: controller.signal
+  });
+
+  for await (const chunk of stream) {
+    process.stdout.write(chunk.content);
+  }
+} catch (error) {
+  if (error.name === 'AbortError') {
+    console.log('\nStream cancelled by user');
+  }
+}
+```
+
+## Streaming with Function Calling
+
+### OpenAI
+
+```typescript
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'What is the weather?' }],
+  tools: [
+    {
+      type: 'function',
+      function: {
+        name: 'get_weather',
+        description: 'Get weather for a location',
+        parameters: {
+          type: 'object',
+          properties: {
+            location: { type: 'string' }
+          }
+        }
+      }
+    }
+  ],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  if (chunk.tool_calls) {
+    console.log('Tool call:', chunk.tool_calls);
+  } else if (chunk.content) {
+    process.stdout.write(chunk.content);
+  }
+}
+```
+
+## Performance Considerations
+
+### Buffer Size
+
+```typescript
+// Accumulate chunks before sending to client
+let buffer = '';
+const BUFFER_SIZE = 50; // characters
+
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Generate content.' }],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  buffer += chunk.content;
+  
+  if (buffer.length >= BUFFER_SIZE) {
+    process.stdout.write(buffer);
+    buffer = '';
+  }
+}
+
+// Flush remaining buffer
+if (buffer) {
+  process.stdout.write(buffer);
+}
+```
+
+### Debouncing Updates
+
+```typescript
+let lastUpdate = Date.now();
+const UPDATE_INTERVAL = 100; // ms
+
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Generate content.' }],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  const now = Date.now();
+  
+  if (now - lastUpdate >= UPDATE_INTERVAL) {
+    process.stdout.write(chunk.content);
+    lastUpdate = now;
+  }
+}
+```
+
+## Compliance with Streaming
+
+<Warning>
+  **Important**: Streaming responses are still audited by Continum. The full response is captured and sent to your sandbox for compliance checking after the stream completes.
+</Warning>
+
+```typescript
+// Guardian still runs before streaming starts
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'My SSN is 123-45-6789' }],
+  stream: true
+});
+// Guardian will detect and redact PII before streaming begins
+
+// Shadow Audit runs after streaming completes
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content);
+}
+// Full response is now sent to sandbox for auditing
+```
+
+## Best Practices
+
+### 1. Always Handle Errors
+
+```typescript
+try {
+  const stream = await continum.llm.openai.gpt_4o.chat({
+    messages: [{ role: 'user', content: 'Generate content.' }],
+    stream: true
+  });
+
+  for await (const chunk of stream) {
+    process.stdout.write(chunk.content);
+  }
+} catch (error) {
+  console.error('Stream failed:', error.message);
+  // Provide fallback or retry logic
+}
+```
+
+### 2. Set Reasonable Timeouts
+
+```typescript
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 30000); // 30s
+
+try {
+  const stream = await continum.llm.openai.gpt_4o.chat({
+    messages: [{ role: 'user', content: 'Generate content.' }],
+    stream: true,
+    signal: controller.signal
+  });
+
+  for await (const chunk of stream) {
+    process.stdout.write(chunk.content);
+  }
+} finally {
+  clearTimeout(timeout);
+}
+```
+
+### 3. Provide User Feedback
+
+```typescript
+console.log('Generating response...');
+
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Write a story.' }],
+  stream: true
+});
+
+let firstChunk = true;
+for await (const chunk of stream) {
+  if (firstChunk) {
+    console.log('\n--- Response ---');
+    firstChunk = false;
+  }
+  process.stdout.write(chunk.content);
+}
+
+console.log('\n--- Complete ---');
+```
+
+## Troubleshooting
+
+### Stream Not Starting
+
+```typescript
+// Check if stream is properly awaited
+const stream = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  stream: true
+});
+
+// Must iterate to start streaming
+for await (const chunk of stream) {
+  console.log(chunk.content);
+}
+```
+
+### Empty Chunks
+
+```typescript
+// Filter out empty chunks
+for await (const chunk of stream) {
+  if (chunk.content && chunk.content.trim()) {
+    process.stdout.write(chunk.content);
+  }
+}
+```
+
+### Connection Drops
+
+```typescript
+// Implement retry logic
+async function streamWithRetry(maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const stream = await continum.llm.openai.gpt_4o.chat({
+        messages: [{ role: 'user', content: 'Generate content.' }],
+        stream: true
+      });
+
+      for await (const chunk of stream) {
+        process.stdout.write(chunk.content);
+      }
+      
+      return; // Success
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      console.log(`Retry ${i + 1}/${maxRetries}...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Vision" icon="eye" href="/sdk/vision">
+    Work with images and vision models
+  </Card>
+  <Card title="OpenAI Integration" icon="https://cdn.simpleicons.org/openai" href="/sdk/openai">
+    OpenAI-specific features
+  </Card>
+  <Card title="Anthropic Integration" icon="https://cdn.simpleicons.org/anthropic" href="/sdk/anthropic">
+    Claude-specific features
+  </Card>
+  <Card title="Configuration" icon="gear" href="/sdk/configuration">
+    Advanced SDK configuration
+  </Card>
+</CardGroup>
