@@ -254,7 +254,7 @@ jobs:
           CONTINUM_API_KEY: ${{ secrets.CONTINUM_API_KEY }}
         run: |
           mkdir -p ~/.continum
-          echo '{"apiUrl":"https://api.continum.dev","apiKey":"'$CONTINUM_API_KEY'"}' > ~/.continum/credentials.json
+          echo '{"apiUrl":"https://api.continum.co","apiKey":"'$CONTINUM_API_KEY'"}' > ~/.continum/credentials.json
       - name: Initialize Continum
         run: continum init --silent
       - name: Scan Files
