@@ -35,7 +35,6 @@
               "cli/authentication",
               "cli/commands",
               "cli/configuration",
-              "cli/pattern-learning",
               "cli/team-deployment"
             ]
           },
