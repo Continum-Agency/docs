@@ -1,0 +1,399 @@
+---
+title: "Incident Management"
+description: "Track and resolve high-risk compliance incidents"
+---
+
+## What are Incidents?
+
+When Continum detects HIGH or CRITICAL risk signals, it automatically creates an incident trail for tracking investigation and resolution. Incidents provide a complete audit trail with segregation of duties, ensuring compliance with regulatory requirements for incident response.
+
+## Incident Lifecycle
+
+### 1. DETECTED
+
+Automatically created when a HIGH or CRITICAL signal is detected:
+
+```json
+{
+  "status": "DETECTED",
+  "signalId": "sig_abc123",
+  "riskLevel": "HIGH",
+  "violations": ["PII_LEAK", "EMAIL"],
+  "detectedAt": "2024-03-15T10:30:00Z"
+}
+```
+
+### 2. INVESTIGATING
+
+Compliance officer begins investigation:
+
+```json
+{
+  "status": "INVESTIGATING",
+  "assignedTo": "compliance_officer_123",
+  "startedAt": "2024-03-15T11:00:00Z"
+}
+```
+
+### 3. REMEDIATING
+
+Issue identified, remediation in progress:
+
+```json
+{
+  "status": "REMEDIATING",
+  "remediationPlan": "Update input validation to prevent PII submission",
+  "startedAt": "2024-03-16T09:00:00Z"
+}
+```
+
+### 4. VERIFIED
+
+Independent auditor verifies resolution:
+
+```json
+{
+  "status": "VERIFIED",
+  "verifiedBy": "auditor_456",
+  "verifiedAt": "2024-03-17T14:30:00Z",
+  "timeToResolution": "48 hours"
+}
+```
+
+## Segregation of Duties
+
+Continum enforces segregation of duties to meet compliance requirements:
+
+### Role Requirements
+
+- **COMPLIANCE_OFFICER**: Can investigate and remediate
+- **AUDITOR**: Can verify resolution (cannot be the same person who investigated)
+- **ADMIN**: Can view all incidents
+- **VIEWER**: Read-only access
+
+### Enforcement
+
+```bash
+# Compliance officer investigates
+curl -X PATCH "https://api.continum.co/evidence/incidents/inc_123/status" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "INVESTIGATING",
+    "userId": "compliance_officer_123",
+    "userRole": "COMPLIANCE_OFFICER"
+  }'
+
+# Same person cannot verify (will fail)
+curl -X PATCH "https://api.continum.co/evidence/incidents/inc_123/status" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "VERIFIED",
+    "userId": "compliance_officer_123",
+    "userRole": "COMPLIANCE_OFFICER"
+  }'
+# Error: "COMPLIANCE_OFFICER cannot verify their own incident"
+
+# Different auditor must verify
+curl -X PATCH "https://api.continum.co/evidence/incidents/inc_123/status" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "VERIFIED",
+    "userId": "auditor_456",
+    "userRole": "AUDITOR"
+  }'
+# Success ✅
+```
+
+## Creating Incidents
+
+### Automatic Creation
+
+HIGH and CRITICAL signals automatically create incidents:
+
+```typescript
+// SDK automatically creates incident for HIGH/CRITICAL signals
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'My SSN is 123-45-6789' }]
+});
+
+// If Guardian detects HIGH risk:
+// 1. Signal created with riskLevel: HIGH
+// 2. Incident automatically created
+// 3. Status set to DETECTED
+// 4. Notification sent (if configured)
+```
+
+### Manual Creation
+
+Create incidents for specific signals:
+
+```bash
+curl -X POST "https://api.continum.co/evidence/incidents" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "signalId": "sig_abc123"
+  }'
+```
+
+## Viewing Incidents
+
+### Get Incident Details
+
+```bash
+curl "https://api.continum.co/evidence/incidents/inc_123" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Response:
+
+```json
+{
+  "id": "inc_123",
+  "signalId": "sig_abc123",
+  "status": "VERIFIED",
+  "changes": [
+    {
+      "id": "change_1",
+      "fromStatus": null,
+      "toStatus": "DETECTED",
+      "userId": "system",
+      "userRole": "ADMIN",
+      "timestamp": "2024-03-15T10:30:00Z",
+      "hash": "a1b2c3d4..."
+    },
+    {
+      "id": "change_2",
+      "fromStatus": "DETECTED",
+      "toStatus": "INVESTIGATING",
+      "userId": "compliance_officer_123",
+      "userRole": "COMPLIANCE_OFFICER",
+      "timestamp": "2024-03-15T11:00:00Z",
+      "hash": "d4e5f6g7..."
+    },
+    {
+      "id": "change_3",
+      "fromStatus": "INVESTIGATING",
+      "toStatus": "REMEDIATING",
+      "userId": "compliance_officer_123",
+      "userRole": "COMPLIANCE_OFFICER",
+      "timestamp": "2024-03-16T09:00:00Z",
+      "hash": "g7h8i9j0..."
+    },
+    {
+      "id": "change_4",
+      "fromStatus": "REMEDIATING",
+      "toStatus": "VERIFIED",
+      "userId": "auditor_456",
+      "userRole": "AUDITOR",
+      "timestamp": "2024-03-17T14:30:00Z",
+      "hash": "j0k1l2m3..."
+    }
+  ],
+  "createdAt": "2024-03-15T10:30:00Z",
+  "resolvedAt": "2024-03-17T14:30:00Z",
+  "timeToResolution": "48 hours"
+}
+```
+
+### List All Incidents
+
+```bash
+curl "https://api.continum.co/evidence/incidents?status=INVESTIGATING" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Filter by:
+- `status`: DETECTED, INVESTIGATING, REMEDIATING, VERIFIED
+- `startDate`: Filter by creation date
+- `endDate`: Filter by creation date
+
+## Time-to-Resolution
+
+Continum automatically calculates time-to-resolution:
+
+```bash
+curl "https://api.continum.co/evidence/incidents/inc_123/time-to-resolution" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Response:
+
+```json
+{
+  "incidentId": "inc_123",
+  "timeToResolutionMs": 172800000,
+  "timeToResolutionHours": 48,
+  "timeToResolutionDays": 2,
+  "detectedAt": "2024-03-15T10:30:00Z",
+  "resolvedAt": "2024-03-17T14:30:00Z"
+}
+```
+
+## Cryptographic Audit Trail
+
+Every status change is cryptographically signed:
+
+```json
+{
+  "change": {
+    "fromStatus": "INVESTIGATING",
+    "toStatus": "REMEDIATING",
+    "userId": "compliance_officer_123",
+    "timestamp": "2024-03-16T09:00:00Z",
+    "hash": "SHA256(fromStatus + toStatus + userId + timestamp + previousHash)"
+  }
+}
+```
+
+This creates an immutable audit trail where any tampering is immediately detectable.
+
+## Incident Notifications
+
+Configure notifications for incident events:
+
+### Email Notifications
+
+```json
+{
+  "notificationConfig": {
+    "email": {
+      "enabled": true,
+      "recipients": ["compliance@company.com"],
+      "events": ["INCIDENT_CREATED", "INCIDENT_VERIFIED"]
+    }
+  }
+}
+```
+
+### Webhook Notifications
+
+```json
+{
+  "notificationConfig": {
+    "webhook": {
+      "enabled": true,
+      "url": "https://your-app.com/webhook",
+      "events": ["INCIDENT_CREATED", "INCIDENT_STATUS_CHANGED"]
+    }
+  }
+}
+```
+
+## Dashboard Integration
+
+View and manage incidents in the Continum dashboard:
+
+- **Incident List**: All incidents with status and age
+- **Incident Details**: Complete audit trail
+- **Status Updates**: Update incident status with role verification
+- **Time Metrics**: Average time-to-resolution
+- **Trend Analysis**: Incident volume over time
+
+## Best Practices
+
+### Response Times
+
+Establish clear response time targets:
+
+- **CRITICAL**: Immediate response (< 1 hour)
+- **HIGH**: Same-day response (< 8 hours)
+- **MEDIUM**: Weekly review
+- **LOW**: Monthly review
+
+### Investigation Process
+
+Follow a consistent investigation process:
+
+1. **Acknowledge**: Assign to compliance officer
+2. **Analyze**: Review signal details and context
+3. **Identify**: Determine root cause
+4. **Remediate**: Implement fix
+5. **Verify**: Independent verification by auditor
+6. **Document**: Record findings and actions
+
+### Segregation of Duties
+
+Maintain clear role separation:
+
+- Different people for investigation and verification
+- Document role assignments
+- Audit role compliance
+- Regular role reviews
+
+### Documentation
+
+Document all incident activities:
+
+- Investigation findings
+- Remediation actions
+- Verification results
+- Lessons learned
+- Process improvements
+
+## Incident Metrics
+
+Track incident metrics for compliance reporting:
+
+### Volume Metrics
+
+- Total incidents by period
+- Incidents by risk level
+- Incidents by violation type
+- Incident rate trends
+
+### Resolution Metrics
+
+- Average time-to-resolution
+- Resolution rate by status
+- Overdue incidents
+- Repeat incidents
+
+### Compliance Metrics
+
+- Segregation of duties compliance
+- Documentation completeness
+- Verification rate
+- Audit trail integrity
+
+## Integration with Evidence Packages
+
+Incidents are automatically included in evidence packages:
+
+```bash
+curl -X POST "https://api.continum.co/evidence/packages" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "framework": "SOC2",
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-12-31T23:59:59Z",
+    "includeIncidents": true
+  }'
+```
+
+Evidence packages include:
+- Incident summary statistics
+- Complete incident trails
+- Time-to-resolution metrics
+- Segregation of duties verification
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Evidence" icon="file-certificate" href="/concepts/evidence">
+    Learn about compliance evidence
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/evidence/incidents">
+    Incident API documentation
+  </Card>
+  <Card title="Dashboard" icon="gauge" href="/dashboard/incidents">
+    Manage incidents in dashboard
+  </Card>
+  <Card title="Compliance" icon="shield-check" href="/compliance/regulations">
+    Regulatory requirements
+  </Card>
+</CardGroup>

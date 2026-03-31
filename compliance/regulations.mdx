@@ -1,0 +1,435 @@
+---
+title: "Regulatory Frameworks"
+description: "Understanding compliance requirements for AI applications"
+---
+
+## Overview
+
+Continum helps you demonstrate compliance with major regulatory frameworks by automatically mapping your monitoring signals to specific regulatory requirements. This documentation explains how Continum supports each framework.
+
+## Supported Frameworks
+
+### GDPR (General Data Protection Regulation)
+
+The EU's comprehensive data protection regulation.
+
+#### Key Requirements Monitored
+
+**Article 25 - Data Protection by Design**
+- Continum's Guardian detects PII before it reaches LLMs
+- Automatic redaction of personal data
+- Privacy-by-default monitoring
+
+**Article 32 - Security of Processing**
+- Continuous security monitoring
+- Detection of data breaches
+- Cryptographic integrity verification
+
+**Article 35 - Data Protection Impact Assessment**
+- Risk level assessment for all interactions
+- Automated impact analysis
+- Compliance evidence generation
+
+#### Continum Coverage
+
+```bash
+curl "https://api.continum.co/evidence/attestations/coverage?framework=GDPR" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Response shows:
+- Which GDPR articles are actively monitored
+- Coverage percentage
+- Recommended monitoring configurations
+
+### SOC 2 (Service Organization Control 2)
+
+Trust Services Criteria for service providers.
+
+#### Key Requirements Monitored
+
+**CC6.1 - Logical and Physical Access Controls**
+- Monitoring of unauthorized access attempts
+- Detection of privilege escalation
+- Access pattern analysis
+
+**CC7.2 - System Monitoring**
+- Continuous monitoring of all AI interactions
+- Real-time violation detection
+- Incident tracking and resolution
+
+**CC8.1 - Change Management**
+- Monitoring of system behavior changes
+- Detection of unexpected outputs
+- Configuration drift detection
+
+#### Continum Coverage
+
+Continum provides evidence for SOC 2 Type II audits:
+- Continuous monitoring over audit period
+- Incident response documentation
+- Cryptographic audit trails
+- Coverage analysis reports
+
+### ISO 27001 (Information Security Management)
+
+International standard for information security.
+
+#### Key Requirements Monitored
+
+**A.12.6.1 - Technical Vulnerability Management**
+- Detection of security vulnerabilities in outputs
+- Code injection monitoring
+- Secret leak detection
+
+**A.14.2.5 - Secure System Engineering Principles**
+- Security-by-design monitoring
+- Threat detection in AI outputs
+- Security policy enforcement
+
+**A.16.1.4 - Assessment of Information Security Events**
+- Automated risk assessment
+- Incident classification
+- Impact analysis
+
+#### Continum Coverage
+
+ISO 27001 certification support:
+- Continuous security monitoring
+- Vulnerability detection
+- Incident management
+- Evidence packages for auditors
+
+### HIPAA (Health Insurance Portability and Accountability Act)
+
+US healthcare data protection regulation.
+
+#### Key Requirements Monitored
+
+**§164.308 - Administrative Safeguards**
+- Access controls and monitoring
+- Incident response procedures
+- Security awareness and training evidence
+
+**§164.312 - Technical Safeguards**
+- Audit controls and logging
+- Integrity verification
+- Transmission security monitoring
+
+**§164.530 - Administrative Requirements**
+- Complaint and sanction tracking
+- Mitigation documentation
+- Compliance evidence
+
+#### Continum Coverage
+
+HIPAA compliance support:
+- PHI detection and protection
+- Audit trail generation
+- Incident documentation
+- Business Associate Agreement (BAA) support
+
+### CCPA (California Consumer Privacy Act)
+
+California's consumer privacy law.
+
+#### Key Requirements Monitored
+
+**Right to Know**
+- Tracking of personal information processing
+- Data collection monitoring
+- Purpose limitation verification
+
+**Right to Delete**
+- Data retention policy enforcement
+- Deletion verification
+- Retention compliance
+
+**Right to Opt-Out**
+- Consent verification
+- Opt-out compliance monitoring
+- Data sharing detection
+
+### EU AI Act
+
+European Union's AI regulation.
+
+#### Key Requirements Monitored
+
+**High-Risk AI Systems**
+- Bias detection and monitoring
+- Transparency requirements
+- Human oversight verification
+
+**Prohibited AI Practices**
+- Manipulation detection
+- Subliminal techniques monitoring
+- Social scoring prevention
+
+**Transparency Obligations**
+- AI interaction disclosure
+- Deepfake detection
+- Automated decision documentation
+
+### PCI DSS (Payment Card Industry Data Security Standard)
+
+Security standard for payment card processing.
+
+#### Key Requirements Monitored
+
+**Requirement 3 - Protect Stored Cardholder Data**
+- Credit card number detection
+- CVV detection
+- Cardholder data protection
+
+**Requirement 10 - Track and Monitor All Access**
+- Comprehensive audit logging
+- Access monitoring
+- Incident tracking
+
+**Requirement 11 - Regularly Test Security Systems**
+- Continuous security testing
+- Vulnerability detection
+- Security monitoring
+
+## Framework Comparison
+
+| Framework | Focus | Continum Support | Evidence Package |
+|-----------|-------|------------------|------------------|
+| GDPR | Data Protection | Full | ✅ |
+| SOC 2 | Trust Services | Full | ✅ |
+| ISO 27001 | Information Security | Full | ✅ |
+| HIPAA | Healthcare Data | Full | ✅ |
+| CCPA | Consumer Privacy | Full | ✅ |
+| EU AI Act | AI Regulation | Full | ✅ |
+| PCI DSS | Payment Security | Full | ✅ |
+
+## Using Framework Attestations
+
+### View Attestations
+
+See how your signals map to regulatory requirements:
+
+```bash
+curl "https://api.continum.co/evidence/attestations?framework=SOC2" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Response:
+
+```json
+{
+  "framework": "SOC2",
+  "attestations": [
+    {
+      "signalId": "sig_123",
+      "requirementId": "CC6.1",
+      "requirementClause": "CC6.1 - Logical and physical access controls",
+      "sandboxType": "SECURITY_AUDIT",
+      "timestamp": "2024-03-15T10:30:00Z"
+    },
+    {
+      "signalId": "sig_124",
+      "requirementId": "CC7.2",
+      "requirementClause": "CC7.2 - System monitoring",
+      "sandboxType": "AGENT_SAFETY",
+      "timestamp": "2024-03-15T11:00:00Z"
+    }
+  ]
+}
+```
+
+### Coverage Analysis
+
+Understand your compliance coverage:
+
+```bash
+curl "https://api.continum.co/evidence/attestations/coverage?framework=GDPR" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+Response:
+
+```json
+{
+  "framework": "GDPR",
+  "totalRequirements": 42,
+  "coveredRequirements": 38,
+  "coveragePercentage": 90.5,
+  "uncoveredRequirements": [
+    {
+      "requirementId": "Art33",
+      "clause": "Article 33 - Notification of personal data breach",
+      "recommendation": "Enable incident notification webhooks"
+    }
+  ],
+  "activeSandboxTypes": ["PII_DETECTION", "SECURITY_AUDIT"],
+  "recommendedSandboxTypes": ["BIAS_DETECTION"]
+}
+```
+
+## Evidence Package Generation
+
+Generate framework-specific evidence packages:
+
+```bash
+curl -X POST "https://api.continum.co/evidence/packages" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "framework": "SOC2",
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-12-31T23:59:59Z",
+    "includeIncidents": true,
+    "includeHashChain": true
+  }'
+```
+
+Evidence packages include:
+- Executive summary
+- Requirement coverage analysis
+- Compliance attestations
+- Incident reports
+- Hash chain verification
+- Recommendations
+
+## Multi-Framework Compliance
+
+Monitor multiple frameworks simultaneously:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY,
+  apiKeys: { openai: process.env.OPENAI_API_KEY }
+});
+
+// Create sandbox with multiple frameworks
+await fetch('https://api.continum.co/sandboxes', {
+  method: 'POST',
+  headers: {
+    'x-continum-key': process.env.CONTINUM_KEY,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Multi-Framework Compliance',
+    slug: 'multi-compliance',
+    sandboxType: 'FULL_SPECTRUM',
+    regulations: ['GDPR', 'SOC2', 'HIPAA', 'ISO27001']
+  })
+});
+```
+
+## Compliance Policies
+
+Define policies based on regulatory requirements:
+
+```bash
+curl -X POST "https://api.continum.co/evidence/policies" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "GDPR Article 32 Compliance",
+    "description": "Enforce security of processing requirements",
+    "detectionCriteria": {
+      "violationTypes": ["PII_EXPOSURE", "SECURITY_VULNERABILITY"],
+      "riskLevels": ["HIGH", "CRITICAL"],
+      "regulations": ["GDPR"]
+    },
+    "active": true
+  }'
+```
+
+## Auditor Access
+
+Grant framework-specific access to auditors:
+
+```bash
+# Create auditor token with specific permissions
+curl -X POST "https://api.continum.co/auditor/tokens" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "auditorEmail": "auditor@firm.com",
+    "permissions": ["READ_SIGNALS", "READ_ATTESTATIONS", "DOWNLOAD_PACKAGES"],
+    "frameworks": ["SOC2"],
+    "expiresAt": "2024-12-31T23:59:59Z"
+  }'
+```
+
+## Best Practices
+
+### Framework Selection
+
+Choose frameworks based on your business:
+
+- **SaaS Companies**: SOC 2, GDPR, ISO 27001
+- **Healthcare**: HIPAA, GDPR, ISO 27001
+- **E-commerce**: PCI DSS, GDPR, CCPA
+- **Financial Services**: SOC 2, ISO 27001, PCI DSS
+- **EU Operations**: GDPR, EU AI Act, ISO 27001
+
+### Coverage Monitoring
+
+Monitor compliance coverage regularly:
+
+1. Review coverage reports monthly
+2. Address gaps in monitoring
+3. Update sandbox configurations
+4. Validate regulatory mappings
+
+### Evidence Generation
+
+Generate evidence packages:
+
+- Quarterly for internal reviews
+- Annually for compliance audits
+- On-demand for regulatory submissions
+- Before certification assessments
+
+### Continuous Compliance
+
+Maintain continuous compliance:
+
+- Real-time monitoring
+- Automated attestations
+- Incident tracking
+- Regular verification
+
+## Compliance Roadmap
+
+Continum's compliance support roadmap:
+
+### Current Support
+
+- GDPR (Full)
+- SOC 2 (Full)
+- ISO 27001 (Full)
+- HIPAA (Full)
+- CCPA (Full)
+- EU AI Act (Full)
+- PCI DSS (Full)
+
+### Coming Soon
+
+- NIST Cybersecurity Framework
+- FedRAMP
+- CMMC (Cybersecurity Maturity Model Certification)
+- PIPEDA (Canada)
+- LGPD (Brazil)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Evidence" icon="file-certificate" href="/concepts/evidence">
+    Learn about compliance evidence
+  </Card>
+  <Card title="Attestations API" icon="code" href="/api-reference/evidence/attestations">
+    Attestations API documentation
+  </Card>
+  <Card title="Evidence Packages" icon="box-archive" href="/api-reference/evidence/packages">
+    Generate audit reports
+  </Card>
+  <Card title="Dashboard" icon="gauge" href="/dashboard/compliance">
+    View compliance in dashboard
+  </Card>
+</CardGroup>

@@ -46,7 +46,22 @@
               "concepts/guardian",
               "concepts/mirror",
               "concepts/sandbox",
-              "concepts/signal"
+              "concepts/signal",
+              "concepts/evidence",
+              "concepts/incidents"
+            ]
+          },
+          {
+            "group": "Compliance",
+            "pages": [
+              "compliance/regulations"
+            ]
+          },
+          {
+            "group": "Dashboard",
+            "pages": [
+              "dashboard/overview",
+              "dashboard/evidence"
             ]
           }
           
@@ -60,6 +75,12 @@
             "pages": [
               "api-reference/introduction",
               "api-reference/authentication"
+            ]
+          },
+          {
+            "group": "Evidence API",
+            "pages": [
+              "api-reference/evidence-introduction"
             ]
           }
         ]

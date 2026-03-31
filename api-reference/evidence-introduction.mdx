@@ -1,0 +1,322 @@
+---
+title: "Evidence API"
+description: "Transform compliance monitoring into audit-ready evidence"
+---
+
+## Overview
+
+The Evidence API provides endpoints for managing compliance evidence, including cryptographic verification, regulatory attestations, incident management, and evidence package generation.
+
+## Base URL
+
+```
+https://api.continum.co/evidence
+```
+
+## Authentication
+
+All Evidence API endpoints require authentication via the `x-continum-key` header:
+
+```bash
+curl "https://api.continum.co/evidence/hash-chain/verify" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+## Core Capabilities
+
+### Hash Chain Verification
+
+Verify the cryptographic integrity of your compliance records:
+
+```bash
+GET /evidence/hash-chain/verify
+```
+
+Ensures that no compliance signals have been tampered with.
+
+### Regulatory Attestations
+
+View how your signals map to regulatory requirements:
+
+```bash
+GET /evidence/attestations?framework=GDPR
+```
+
+Supports GDPR, SOC 2, ISO 27001, HIPAA, and more.
+
+### Incident Management
+
+Track high-risk incidents through investigation and resolution:
+
+```bash
+POST /evidence/incidents
+PATCH /evidence/incidents/:id/status
+GET /evidence/incidents/:id
+```
+
+Includes segregation of duties enforcement.
+
+### Evidence Packages
+
+Generate audit-ready compliance reports:
+
+```bash
+POST /evidence/packages
+GET /evidence/packages/:id/download
+```
+
+Comprehensive packages for regulatory audits.
+
+### Compliance Policies
+
+Define automated compliance policies:
+
+```bash
+POST /evidence/policies
+GET /evidence/policies/:id/report
+```
+
+Track policy enforcement and violations.
+
+### Data Retention
+
+Manage data retention while preserving compliance evidence:
+
+```bash
+POST /evidence/retention/policies
+GET /evidence/retention/status
+DELETE /evidence/retention/signals/:id
+```
+
+Respects regulatory retention requirements.
+
+### Pattern Correlation
+
+Detect patterns across multiple signals:
+
+```bash
+POST /evidence/correlations/detect
+GET /evidence/correlations/:id
+```
+
+Identifies systemic compliance issues.
+
+## External Auditor API
+
+Grant read-only access to external auditors:
+
+```
+https://api.continum.co/auditor
+```
+
+Auditors use Bearer token authentication:
+
+```bash
+curl "https://api.continum.co/auditor/signals?customerId=cust_123" \
+  -H "Authorization: Bearer aud_token_abc123"
+```
+
+### Auditor Permissions
+
+- `READ_SIGNALS`: View compliance signals
+- `READ_ATTESTATIONS`: View regulatory mappings
+- `READ_INCIDENTS`: View incident trails
+- `VERIFY_HASH_CHAIN`: Verify cryptographic integrity
+- `DOWNLOAD_PACKAGES`: Download evidence packages
+
+## Response Format
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    // Response data
+  }
+}
+```
+
+### Error Response
+
+```json
+{
+  "statusCode": 400,
+  "message": "Bad Request",
+  "error": "Invalid request parameters"
+}
+```
+
+## Common Parameters
+
+### Date Range
+
+Many endpoints support date range filtering:
+
+```bash
+?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T23:59:59Z
+```
+
+### Framework
+
+Filter by regulatory framework:
+
+```bash
+?framework=GDPR
+```
+
+Options: `GDPR`, `SOC2`, `ISO27001`, `HIPAA`, `CCPA`, `EU_AI_ACT`, `PCI_DSS`
+
+### Pagination
+
+List endpoints support pagination:
+
+```bash
+?page=1&limit=50
+```
+
+## Rate Limiting
+
+Evidence API endpoints have the same rate limits as other Continum APIs:
+
+| Plan | Rate Limit | Burst |
+|------|------------|-------|
+| DEV | 10 req/s | 50 |
+| PRO | 100 req/s | 500 |
+| PRO_MAX | 500 req/s | 2500 |
+| ENTERPRISE | Custom | Custom |
+
+## Endpoint Categories
+
+<CardGroup cols={2}>
+  <Card title="Hash Chain" icon="link" href="/api-reference/evidence/hash-chain">
+    Verify cryptographic integrity
+  </Card>
+  <Card title="Attestations" icon="certificate" href="/api-reference/evidence/attestations">
+    Regulatory requirement mappings
+  </Card>
+  <Card title="Incidents" icon="triangle-exclamation" href="/api-reference/evidence/incidents">
+    Track high-risk incidents
+  </Card>
+  <Card title="Policies" icon="file-contract" href="/api-reference/evidence/policies">
+    Automated compliance policies
+  </Card>
+  <Card title="Packages" icon="box-archive" href="/api-reference/evidence/packages">
+    Generate audit reports
+  </Card>
+  <Card title="Retention" icon="clock" href="/api-reference/evidence/retention">
+    Data retention management
+  </Card>
+  <Card title="Correlations" icon="diagram-project" href="/api-reference/evidence/correlations">
+    Pattern detection
+  </Card>
+  <Card title="Auditor API" icon="user-shield" href="/api-reference/evidence/auditor">
+    External auditor access
+  </Card>
+</CardGroup>
+
+## Use Cases
+
+### SOC 2 Type II Audit
+
+Generate a comprehensive evidence package for your SOC 2 audit:
+
+```bash
+curl -X POST "https://api.continum.co/evidence/packages" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "framework": "SOC2",
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-12-31T23:59:59Z",
+    "includeIncidents": true,
+    "includeHashChain": true
+  }'
+```
+
+### GDPR Compliance Verification
+
+Verify GDPR compliance coverage:
+
+```bash
+curl "https://api.continum.co/evidence/attestations/coverage?framework=GDPR" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+### Incident Response
+
+Track a high-risk incident through resolution:
+
+```bash
+# Create incident
+curl -X POST "https://api.continum.co/evidence/incidents" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"signalId": "sig_abc123"}'
+
+# Update status
+curl -X PATCH "https://api.continum.co/evidence/incidents/inc_123/status" \
+  -H "x-continum-key: co_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "INVESTIGATING",
+    "userId": "compliance_officer_123",
+    "userRole": "COMPLIANCE_OFFICER"
+  }'
+```
+
+### Tamper Detection
+
+Verify that compliance records haven't been tampered with:
+
+```bash
+curl "https://api.continum.co/evidence/hash-chain/verify" \
+  -H "x-continum-key: co_your_api_key_here"
+```
+
+## Best Practices
+
+### Regular Verification
+
+Verify hash chain integrity regularly:
+- Daily automated checks
+- Before generating evidence packages
+- During security audits
+
+### Evidence Package Generation
+
+Generate evidence packages:
+- Quarterly for internal reviews
+- Annually for compliance audits
+- On-demand for security assessments
+
+### Incident Management
+
+Establish clear incident workflows:
+- Immediate response for CRITICAL
+- 24-hour response for HIGH
+- Segregation of duties for verification
+
+### Auditor Access
+
+Grant auditor access securely:
+- Time-limited tokens
+- Minimum required permissions
+- Log all auditor activity
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Evidence Concepts" icon="book" href="/concepts/evidence">
+    Learn about evidence and compliance
+  </Card>
+  <Card title="Incident Management" icon="triangle-exclamation" href="/concepts/incidents">
+    Understand incident workflows
+  </Card>
+  <Card title="Dashboard" icon="gauge" href="/dashboard/evidence">
+    View evidence in dashboard
+  </Card>
+  <Card title="Compliance" icon="shield-check" href="/compliance/regulations">
+    Regulatory frameworks
+  </Card>
+</CardGroup>

@@ -1,0 +1,422 @@
+---
+title: "Evidence Dashboard"
+description: "View and manage compliance evidence in the Continum dashboard"
+---
+
+## Overview
+
+The Evidence Dashboard provides a comprehensive view of your compliance evidence, including cryptographic verification, regulatory attestations, incident management, and evidence package generation.
+
+## Accessing the Evidence Dashboard
+
+Navigate to the Evidence section in your Continum dashboard:
+
+```
+https://app.continum.co/evidence
+```
+
+## Dashboard Sections
+
+### Hash Chain Verification
+
+View the cryptographic integrity of your compliance records.
+
+#### Features
+
+- **Verification Status**: Real-time integrity verification
+- **Signal Count**: Total signals in the chain
+- **Last Verification**: Timestamp of last verification
+- **Tamper Detection**: Alerts if tampering is detected
+
+#### Actions
+
+- **Verify Now**: Run immediate verification
+- **Download Chain**: Export complete hash chain
+- **View Details**: See individual hash values
+
+### Regulatory Attestations
+
+View how your signals map to regulatory requirements.
+
+#### Features
+
+- **Framework Selection**: Filter by GDPR, SOC 2, ISO 27001, HIPAA, etc.
+- **Coverage Percentage**: Visual coverage indicator
+- **Requirement Mapping**: Signals mapped to specific requirements
+- **Gap Analysis**: Uncovered requirements with recommendations
+
+#### Filters
+
+- Framework (GDPR, SOC2, ISO27001, HIPAA, CCPA, EU_AI_ACT, PCI_DSS)
+- Date range
+- Sandbox type
+- Coverage status
+
+### Incident Management
+
+Track and manage high-risk compliance incidents.
+
+#### Incident List
+
+View all incidents with:
+- Incident ID
+- Status (DETECTED, INVESTIGATING, REMEDIATING, VERIFIED)
+- Risk level
+- Created date
+- Time since creation
+- Assigned to
+
+#### Incident Details
+
+Click any incident to view:
+- Complete audit trail
+- Status change history
+- User roles and timestamps
+- Cryptographic hashes
+- Time-to-resolution
+- Related signal details
+
+#### Status Updates
+
+Update incident status with role verification:
+
+1. Select incident
+2. Choose new status
+3. Enter user ID and role
+4. Add notes (optional)
+5. Submit
+
+The system enforces segregation of duties:
+- Compliance officers can investigate and remediate
+- Auditors must verify (cannot be the same person)
+
+### Compliance Policies
+
+View and manage automated compliance policies.
+
+#### Policy List
+
+- Policy name and description
+- Detection criteria
+- Active status
+- Enforcement count
+- Last enforcement
+
+#### Policy Reports
+
+Click any policy to view:
+- Total enforcements
+- Signals by risk level
+- Enforcement timeline
+- Violation breakdown
+
+#### Create Policy
+
+1. Click "Create Policy"
+2. Enter name and description
+3. Define detection criteria:
+   - Violation types
+   - Risk levels
+   - Regulations
+4. Set active status
+5. Save
+
+### Evidence Packages
+
+Generate and download audit-ready compliance reports.
+
+#### Package List
+
+View all generated packages:
+- Package ID
+- Framework
+- Date range
+- Signal count
+- Coverage percentage
+- Generated date
+- Download status
+
+#### Generate Package
+
+1. Click "Generate Package"
+2. Select framework
+3. Choose date range
+4. Select options:
+   - Include incidents
+   - Include hash chain
+   - Include coverage analysis
+5. Generate
+
+Package generation takes 30-60 seconds. You'll receive a notification when ready.
+
+#### Download Package
+
+Click "Download" to get the PDF evidence package containing:
+- Executive summary
+- Compliance attestations
+- Incident reports
+- Hash chain verification
+- Coverage analysis
+- Recommendations
+
+### Data Retention
+
+Manage data retention while preserving compliance evidence.
+
+#### Retention Status
+
+View:
+- Total signals
+- Eligible for deletion
+- Protected by incidents
+- Oldest signal date
+- Newest signal date
+
+#### Retention Policies
+
+View and manage retention policies:
+- Framework
+- Minimum retention days
+- Maximum retention days
+- Active status
+
+#### Delete Signals
+
+1. View eligible signals
+2. Select signals to delete
+3. Confirm deletion
+4. Signals deleted, hashes preserved
+
+Protected signals (involved in active incidents) cannot be deleted.
+
+### Pattern Correlations
+
+View detected patterns across multiple signals.
+
+#### Correlation List
+
+- Correlation ID
+- Violation type
+- Signal count
+- Severity (MEDIUM, HIGH, SYSTEMIC_ISSUE)
+- Detection date
+
+#### Correlation Details
+
+Click any correlation to view:
+- Related signals
+- Risk level distribution
+- Sandbox type distribution
+- Timeline
+- Escalation status
+
+#### Escalate Correlation
+
+Manually escalate correlations to SYSTEMIC_ISSUE status for high-priority attention.
+
+## Filters and Search
+
+### Global Filters
+
+Available across all sections:
+
+- **Date Range**: Filter by creation date
+- **Framework**: Filter by regulatory framework
+- **Sandbox**: Filter by sandbox type
+- **Risk Level**: Filter by risk level
+- **Status**: Filter by status (for incidents)
+
+### Search
+
+Search for specific:
+- Signal IDs
+- Incident IDs
+- Package IDs
+- Correlation IDs
+
+## Exporting Data
+
+### Export Formats
+
+Export data in multiple formats:
+
+- **CSV**: Spreadsheet format
+- **JSON**: API format
+- **PDF**: Formatted report
+- **XLSX**: Excel format
+
+### Export Options
+
+1. Apply filters
+2. Click "Export"
+3. Select format
+4. Choose fields to include
+5. Download
+
+## Notifications
+
+Configure notifications for evidence events:
+
+### Email Notifications
+
+- Incident created
+- Incident status changed
+- Hash chain tampering detected
+- Coverage below threshold
+- Package generated
+
+### Webhook Notifications
+
+Configure webhooks for real-time alerts:
+
+```json
+{
+  "url": "https://your-app.com/webhook",
+  "events": [
+    "incident.created",
+    "incident.verified",
+    "hash_chain.tampered",
+    "coverage.below_threshold"
+  ]
+}
+```
+
+## External Auditor Access
+
+Grant read-only access to external auditors.
+
+### Create Auditor Token
+
+1. Navigate to "Auditor Access"
+2. Click "Create Token"
+3. Enter auditor email
+4. Select permissions:
+   - READ_SIGNALS
+   - READ_ATTESTATIONS
+   - READ_INCIDENTS
+   - VERIFY_HASH_CHAIN
+   - DOWNLOAD_PACKAGES
+5. Set expiration date
+6. Generate token
+
+### Auditor Activity Log
+
+View all auditor activity:
+- Timestamp
+- Auditor email
+- Action performed
+- Resource accessed
+- IP address
+
+## Dashboard Metrics
+
+### Overview Metrics
+
+- Total signals
+- Active incidents
+- Coverage percentage
+- Recent verifications
+
+### Trend Analysis
+
+- Incident volume over time
+- Coverage trends
+- Violation type distribution
+- Time-to-resolution trends
+
+### Compliance Score
+
+Overall compliance score based on:
+- Coverage percentage
+- Incident resolution rate
+- Hash chain integrity
+- Policy enforcement
+
+## Best Practices
+
+### Daily Tasks
+
+- Review new incidents
+- Verify hash chain integrity
+- Check notification alerts
+- Monitor coverage metrics
+
+### Weekly Tasks
+
+- Review MEDIUM risk incidents
+- Update incident statuses
+- Analyze correlation patterns
+- Review policy enforcement
+
+### Monthly Tasks
+
+- Generate evidence packages
+- Review coverage reports
+- Update retention policies
+- Audit external access logs
+
+### Quarterly Tasks
+
+- Comprehensive compliance review
+- Generate audit reports
+- Update compliance policies
+- Review framework mappings
+
+## Keyboard Shortcuts
+
+Speed up your workflow with keyboard shortcuts:
+
+- `Ctrl/Cmd + K`: Quick search
+- `Ctrl/Cmd + N`: Create new incident
+- `Ctrl/Cmd + E`: Export current view
+- `Ctrl/Cmd + R`: Refresh data
+- `Ctrl/Cmd + F`: Filter panel
+
+## Mobile Access
+
+Access the Evidence Dashboard on mobile devices:
+
+- Responsive design
+- Touch-optimized interface
+- Push notifications
+- Quick actions
+
+## Troubleshooting
+
+### Hash Chain Verification Failed
+
+If verification fails:
+1. Check date range
+2. Verify signal integrity
+3. Contact support if tampering detected
+
+### Cannot Update Incident Status
+
+If status update fails:
+1. Verify user role
+2. Check segregation of duties
+3. Ensure valid status transition
+
+### Package Generation Timeout
+
+If package generation times out:
+1. Reduce date range
+2. Try again during off-peak hours
+3. Contact support for large packages
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Evidence Concepts" icon="book" href="/concepts/evidence">
+    Learn about compliance evidence
+  </Card>
+  <Card title="Evidence API" icon="code" href="/api-reference/evidence-introduction">
+    Evidence API documentation
+  </Card>
+  <Card title="Incident Management" icon="triangle-exclamation" href="/concepts/incidents">
+    Understand incident workflows
+  </Card>
+  <Card title="Regulatory Frameworks" icon="shield-check" href="/compliance/regulations">
+    Supported compliance frameworks
+  </Card>
+</CardGroup>

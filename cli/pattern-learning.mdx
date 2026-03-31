@@ -1,0 +1,368 @@
+---
+title: 'Pattern Learning'
+description: 'How Continum CLI detects and learns credential patterns'
+---
+
+## Overview
+
+The Continum CLI uses a combination of built-in patterns and machine learning to detect credentials in your code. When it encounters unknown patterns that look like credentials, it can learn from your feedback to improve detection for your entire team.
+
+## How Pattern Detection Works
+
+### 1. Built-in Patterns
+
+The CLI ships with regex patterns for common credential types:
+
+- Cloud provider keys (AWS, GCP, Azure)
+- API keys (GitHub, Stripe, OpenAI, etc.)
+- Database connection strings
+- Private keys and certificates
+- Payment processor tokens
+
+These patterns are maintained by Continum and updated regularly.
+
+### 2. Entropy Analysis
+
+For unknown strings, the CLI analyzes:
+
+- **Character entropy**: Random-looking strings score higher
+- **Length**: Typical credential lengths (16-64 characters)
+- **Context**: Variable names like `api_key`, `secret`, `token`
+- **Format**: Patterns like `prefix_randomstring`
+
+### 3. Machine Learning
+
+The CLI uses lightweight ML models to:
+
+- Classify potential credentials
+- Assign confidence scores
+- Reduce false positives
+- Learn from team feedback
+
+## Pattern Learning Flow
+
+### When Unknown Pattern Detected
+
+```bash
+$ git commit -m "add integration"
+
+Continum — scanning 1 file...
+
+⚠️  POSSIBLE CREDENTIAL DETECTED
+
+config.ts (line 14)
+──────────────────────────────────────────────────────
+Type:    UNKNOWN_PATTERN (HIGH confidence)
+Found:   acme_prod_x7k9••••••••
+Pattern: acme_prod_[a-z0-9]{16}
+
+This looks like a credential, but it's not in our pattern library.
+
+Options:
+  [b] Block this commit
+  [a] Approve pattern and block (will catch in future)
+  [i] Ignore this pattern
+  [c] Continue anyway (not recommended)
+
+Choice:
+```
+
+### Option A: Approve Pattern
+
+When you choose `[a] Approve pattern and block`:
+
+```bash
+Choice: a
+
+Pattern description: ACME Production API Key
+Severity level: HIGH
+
+✓ Pattern saved to your library
+✓ This pattern will now be caught locally on future commits
+✓ Pattern shared with your team
+
+Commit blocked. Remove the credential and try again.
+```
+
+**What happens:**
+1. Pattern saved to your local library
+2. Pattern uploaded to Continum
+3. Team members get pattern on next `continum patterns update`
+4. Future commits with this pattern are automatically blocked
+
+### Option B: Block This Commit
+
+When you choose `[b] Block this commit`:
+
+```bash
+Choice: b
+
+Commit blocked. Remove the credential and try again.
+```
+
+**What happens:**
+1. Commit is blocked
+2. Pattern is NOT saved (one-time block)
+3. Next occurrence will prompt again
+
+### Option I: Ignore Pattern
+
+When you choose `[i] Ignore this pattern`:
+
+```bash
+Choice: i
+
+✓ Pattern ignored
+✓ Future occurrences will be allowed
+
+[main abc1234] add integration
+```
+
+**What happens:**
+1. Commit proceeds
+2. Pattern added to ignore list
+3. Future occurrences are allowed
+4. Pattern NOT shared with team
+
+<Warning>
+  Use ignore sparingly. Only ignore patterns you're certain are not credentials.
+</Warning>
+
+### Option C: Continue Anyway
+
+When you choose `[c] Continue anyway`:
+
+```bash
+Choice: c
+
+⚠️  Proceeding with potential credential in commit
+
+[main abc1234] add integration
+```
+
+**What happens:**
+1. Commit proceeds
+2. Pattern is NOT saved or ignored
+3. Next occurrence will prompt again
+4. Audit sent to Continum for review
+
+## Team Pattern Sharing
+
+### How It Works
+
+When you approve a pattern:
+
+1. **Local Save**: Pattern saved to `~/.continum/patterns.json`
+2. **Upload**: Pattern sent to Continum API
+3. **Team Sync**: Other team members get pattern on next update
+
+### Updating Patterns
+
+Team members update their patterns:
+
+```bash
+continum patterns update
+```
+
+This downloads:
+- New patterns approved by teammates
+- Updated built-in patterns from Continum
+- Severity level changes
+
+### Automatic Updates
+
+The CLI automatically checks for pattern updates:
+
+- On `continum login`
+- On `continum init`
+- Every 24 hours during scans
+
+## Pattern Confidence Levels
+
+The CLI assigns confidence scores to unknown patterns:
+
+### HIGH Confidence (80-100%)
+
+- Strong entropy
+- Credential-like context
+- Typical credential format
+- Prompts for approval
+
+### MEDIUM Confidence (50-79%)
+
+- Moderate entropy
+- Some credential indicators
+- May be false positive
+- Prompts for approval
+
+### LOW Confidence (< 50%)
+
+- Low entropy
+- Weak indicators
+- Likely false positive
+- Not flagged by default
+
+## Pattern Management
+
+### List Patterns
+
+View all available patterns:
+
+```bash
+continum patterns list
+```
+
+Output:
+
+```
+Built-in Patterns (45)
+──────────────────────────────────────────────────────
+AWS_ACCESS_KEY          CRITICAL
+GITHUB_TOKEN            HIGH
+STRIPE_SECRET_KEY       CRITICAL
+OPENAI_API_KEY          HIGH
+...
+
+Team Patterns (3)
+──────────────────────────────────────────────────────
+ACME_PROD_KEY           HIGH      (approved by john@acme.com)
+INTERNAL_API_TOKEN      MEDIUM    (approved by jane@acme.com)
+...
+```
+
+### Update Patterns
+
+Sync latest patterns from your team:
+
+```bash
+continum patterns update
+```
+
+Output:
+
+```
+Updating patterns from Continum...
+
+✓ Downloaded 2 new team patterns
+✓ Updated 5 built-in patterns
+✓ Patterns saved to ~/.continum/patterns.json
+
+Your pattern library is up to date.
+```
+
+## Best Practices
+
+### Approve Real Credentials
+
+When you see a real credential pattern:
+
+1. Choose `[a] Approve pattern and block`
+2. Provide clear description
+3. Set appropriate severity
+4. Remove credential from code
+5. Rotate the credential
+
+### Ignore Non-Credentials
+
+When you see a false positive:
+
+1. Verify it's NOT a credential
+2. Choose `[i] Ignore this pattern`
+3. Document why it's safe (in code comments)
+
+### Regular Pattern Updates
+
+Keep your patterns current:
+
+```bash
+# Update patterns weekly
+continum patterns update
+
+# Or add to your workflow
+git pull && continum patterns update
+```
+
+### Team Communication
+
+When approving patterns:
+
+- Use clear, descriptive names
+- Set appropriate severity levels
+- Notify team of new patterns
+- Document in team wiki/docs
+
+## Pattern Format
+
+### Regex Patterns
+
+Patterns use standard regex syntax:
+
+```regex
+# AWS Access Key
+AKIA[0-9A-Z]{16}
+
+# Custom format
+acme_(prod|staging)_[a-z0-9]{16}
+
+# Generic high-entropy
+[a-zA-Z0-9]{32,}
+```
+
+### Custom Patterns
+
+Add custom patterns in `.continum.json`:
+
+```json
+{
+  "patterns": {
+    "custom": [
+      "ACME-[0-9]{6}",
+      "internal-project-[a-z]+",
+      "prod_key_[a-zA-Z0-9]{32}"
+    ]
+  }
+}
+```
+
+## Troubleshooting
+
+### Too Many False Positives
+
+If you're getting too many false positives:
+
+1. Ignore specific patterns
+2. Adjust entropy thresholds in config
+3. Add files to ignore list
+4. Contact support for pattern tuning
+
+### Pattern Not Detected
+
+If a credential isn't being caught:
+
+1. Check if pattern exists: `continum patterns list`
+2. Update patterns: `continum patterns update`
+3. Manually add to custom patterns
+4. Report missing pattern to support
+
+### Pattern Sync Issues
+
+If patterns aren't syncing:
+
+1. Check internet connection
+2. Verify authentication: `continum status`
+3. Manually update: `continum patterns update`
+4. Check `~/.continum/patterns.json` permissions
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Commands" icon="terminal" href="/cli/commands">
+    Complete CLI command reference
+  </Card>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Customize scanning behavior
+  </Card>
+  <Card title="Team Deployment" icon="users" href="/cli/team-deployment">
+    Deploy to your entire team
+  </Card>
+</CardGroup>

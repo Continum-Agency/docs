@@ -5,67 +5,68 @@ description: "Understanding Continum's distributed compliance architecture"
 
 ## System Overview
 
-Continum uses a distributed architecture to achieve zero-latency compliance auditing. The system is designed around the principle of "sovereignty-first" - your API keys stay on your server, and compliance runs asynchronously.
+Continum uses a distributed architecture to achieve zero-latency compliance monitoring. The system is designed around the principle of "sovereignty-first" - your API keys stay on your server, and compliance runs asynchronously.
 
 ```
-Developer App (SDK)
+Your Application (SDK)
       │
       ├─→ [Direct] → OpenAI/Claude/Gemini → Response (instant) ⚡
       │
-      └─→ [Async Mirror] → Continum Platform
-                              ↓
-                          Compliance Engine
-                              ↓
-                          Signal Stored
-                              ↓
-                          Dashboard
+      └─→ [Async] → Continum Platform
+                        ↓
+                    Compliance Monitoring
+                        ↓
+                    Evidence & Signals
+                        ↓
+                    Dashboard
 ```
 
-## Components
+## How It Works
 
-### SDK (Client-side)
+### 1. SDK Integration
 
-The Continum SDK runs on your server and manages three responsibilities:
+The Continum SDK integrates into your application and manages:
 
-1. **Direct execution**: Calls LLM providers directly using your API keys
-2. **Guardian check**: Optional pre-LLM PII detection (< 100ms)
-3. **Async mirroring**: Sends compliance triplet to Continum Platform (non-blocking)
+1. **Direct LLM Calls**: Your application calls LLM providers directly using your API keys
+2. **Guardian Protection**: Optional pre-LLM detection and redaction (< 100ms)
+3. **Async Monitoring**: Sends interaction details to Continum for compliance checking (non-blocking)
 
-**Key insight**: The SDK never waits for compliance results before returning the LLM response.
+**Key insight**: The SDK never waits for compliance results before returning the LLM response to your users.
 
-### Continum Platform
+### 2. Continum Platform
 
-The Continum Platform handles:
+The Continum Platform provides:
 
-- Customer and API key management
-- Sandbox configuration
-- Audit ingestion
-- Signal storage and retrieval
-- Dashboard queries
+- Account and API key management
+- Monitoring configuration (sandboxes)
+- Compliance signal storage
+- Evidence generation
+- Dashboard access
 
-### Compliance Engine
+### 3. Compliance Monitoring
 
-The Compliance Engine runs audits in isolated sandboxes:
+Your interactions are monitored for compliance:
 
-- Loads sandbox configuration (type, rules, regulations)
-- Analyzes prompt and response for violations
-- Returns risk level, violations, and reasoning
-- Stores signals for monitoring
+- Analyzes prompts and responses for violations
+- Applies your configured monitoring rules
+- Generates risk assessments and violation reports
+- Creates cryptographically-signed evidence records
 
-**Isolation**: Each audit runs in a fresh, stateless sandbox environment.
+**Privacy**: Each monitoring check runs in isolation with no data retention beyond compliance signals.
 
-### Dashboard
+### 4. Dashboard & Evidence
 
-Web app for monitoring compliance:
+Access your compliance data:
 
 - Real-time signal viewing
 - Risk level breakdown
-- Sandbox management
-- API key generation
+- Incident management
+- Evidence package generation
+- Regulatory attestations
 
 ## Data Flow
 
-### 1. LLM Call with Compliance
+### 1. LLM Call with Monitoring
 
 ```typescript
 const response = await continum.llm.openai.gpt_4o.chat({
@@ -76,98 +77,76 @@ const response = await continum.llm.openai.gpt_4o.chat({
 **What happens**:
 1. SDK calls OpenAI directly → response in ~500ms
 2. SDK returns response to your app immediately
-3. SDK fires async request to Continum Platform (non-blocking)
+3. SDK sends interaction to Continum for monitoring (non-blocking)
 
-### 2. Audit Ingestion
+### 2. Compliance Monitoring
 
-```
-POST /audit/ingest
-{
-  "sandboxSlug": "pii_strict",
-  "provider": "openai",
-  "model": "gpt-4o",
-  "prompt": "Hello",
-  "response": "Hi there!",
-  "metadata": { ... }
-}
-```
+Your interaction is monitored asynchronously:
 
-**What happens**:
-1. Platform validates sandbox exists
-2. Platform increments audit count
-3. Audit queued for processing
-4. Platform returns 202 Accepted immediately
+1. Continum receives interaction details
+2. Applies your monitoring configuration
+3. Analyzes for compliance violations
+4. Generates risk assessment
+5. Creates compliance signal
 
-### 3. Compliance Processing
+### 3. Evidence Creation
 
-```
-Compliance Engine receives audit
-  ↓
-Loads sandbox config (type, rules, regulations)
-  ↓
-Analyzes prompt and response
-  ↓
-Generates risk level + violations
-  ↓
-Stores signal
-```
+Compliance signals become evidence:
 
-### 4. Signal Storage
+1. Signal cryptographically signed
+2. Linked to previous signals (hash chain)
+3. Mapped to regulatory requirements
+4. Available in dashboard
+5. Included in evidence packages
 
-```
-Signal stored:
-{
-  "auditId": "uuid",
-  "riskLevel": "HIGH",
-  "violations": ["PII_LEAK"],
-  "reasoning": "Email j****@example.com detected",
-  ...
-}
-```
+### 4. Access & Reporting
 
-**What happens**:
-1. Signal stored securely
-2. Available in dashboard immediately
-3. Accessible via API queries
+View and use your compliance evidence:
 
-## Security Model
+- Dashboard: Real-time signal viewing
+- API: Programmatic access
+- Evidence Packages: Audit-ready reports
+- Auditor Access: External auditor tokens
 
-### API Key Management
+## Security & Privacy
 
-- **Storage**: Military-grade encryption with secure hash lookup
-- **Transmission**: HTTPS only with `x-continum-key` header
-- **Rotation**: Generate new keys anytime, old keys invalidated
+### Your Data Sovereignty
 
-### Data Privacy
+- **Your API Keys**: Never leave your server - stored only in your environment
+- **Direct LLM Calls**: Your application calls LLM providers directly
+- **Monitoring Data**: Only interaction details sent to Continum for compliance checking
+- **No Data Storage**: Continum stores only compliance signals, not your full data
 
-- **Your API keys**: Never leave your server
-- **Compliance triplets**: Sent to Continum after user has response
-- **Sandbox isolation**: Each audit runs in fresh isolated environment
-- **No storage of raw data**: Only signals (risk level + violations) stored
+### Compliance Evidence Security
 
-### Compliance Standards
+- **Cryptographic Integrity**: Every signal linked in tamper-proof hash chain
+- **Encrypted Storage**: Military-grade encryption for all compliance data
+- **Access Controls**: Role-based access with audit logging
+- **Auditor Tokens**: Time-limited, permission-scoped external access
 
-Continum adheres to:
+### Regulatory Compliance
+
+Continum itself adheres to:
 - SOC 2 Type II compliance
 - GDPR data protection requirements
 - CCPA privacy standards
 - Industry-standard encryption (AES-256)
 
-## Scalability
+## Performance
 
-### Horizontal Scaling
+### User Experience
+
+- **User Latency**: 0ms added (direct LLM call)
+- **Guardian**: < 100ms for pre-LLM detection
+- **Monitoring**: 2-5 seconds (async, user doesn't wait)
+- **Dashboard**: < 100ms query response
+
+### Scalability
 
 - **SDK**: Runs on your servers (scales with your app)
 - **Platform**: Auto-scales based on traffic
-- **Compliance Engine**: Processes thousands of audits concurrently
+- **Monitoring**: Processes thousands of checks concurrently
 - **Dashboard**: Optimized for fast queries
-
-### Performance
-
-- **User latency**: 0ms added (direct LLM call)
-- **Guardian**: < 100ms for PII detection
-- **Audit processing**: 2-5 seconds (async, user doesn't wait)
-- **Dashboard queries**: < 100ms with optimized indexing
 
 ## Integration
 
@@ -204,15 +183,21 @@ GEMINI_API_KEY=xxx
 
 <CardGroup cols={2}>
   <Card title="Zero Latency" icon="bolt" href="/concepts/zero-latency">
-    Learn how zero-latency auditing works
+    Learn how zero-latency monitoring works
   </Card>
   <Card title="Guardian" icon="shield" href="/concepts/guardian">
     Understand pre-LLM protection
   </Card>
+  <Card title="Evidence" icon="file-certificate" href="/concepts/evidence">
+    Transform monitoring into audit-ready evidence
+  </Card>
   <Card title="Sandbox" icon="cube" href="/concepts/sandbox">
-    Explore sandbox types
+    Configure monitoring types
   </Card>
   <Card title="Signal" icon="signal" href="/concepts/signal">
-    Understand audit results
+    Understand monitoring results
+  </Card>
+  <Card title="Incidents" icon="triangle-exclamation" href="/concepts/incidents">
+    Track high-risk incidents
   </Card>
 </CardGroup>

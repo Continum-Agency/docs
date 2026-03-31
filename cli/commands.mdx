@@ -256,18 +256,65 @@ continum uninstall
 
 ---
 
+## continum --help
+
+Display help information and list all available CLI commands.
+
+```bash
+continum --help
+# or
+continum -h
+```
+
+**What it shows:**
+- List of all available commands
+- Brief description of each command
+- Usage examples
+- Global options
+
+**Command-specific help:**
+```bash
+continum scan --help
+continum init --help
+continum login --help
+```
+
+---
+
+## continum --version
+
+Display the current installed version of Continum CLI.
+
+```bash
+continum --version
+# or
+continum -v
+```
+
+**Example output:**
+```bash
+$ continum --version
+continum/0.1.5
+```
+
+Use this to verify your installation or check if you need to update to the latest version.
+
+---
+
 ## Global Options
 
 These options work with any command:
 
-- `--help` - Show help for a command
-- `--version` - Show CLI version
+- `--help` or `-h` - Show help for a command
+- `--version` or `-v` - Show CLI version
 
 **Examples:**
 ```bash
 continum --help
+continum -h
 continum scan --help
 continum --version
+continum -v
 ```
 
 ---

@@ -1,5 +1,5 @@
 ---
-title: "Zero-Latency Auditing"
+title: "Zero-Latency Monitoring"
 description: "How Continum achieves compliance without blocking user responses"
 ---
 
@@ -16,12 +16,12 @@ This is unacceptable for production applications where users expect instant resp
 
 ## Continum's Solution
 
-Continum inverts the flow - compliance runs after the user already has their answer:
+Continum inverts the flow - compliance monitoring runs after the user already has their answer:
 
 ```
 User Request → LLM Call (500ms) → Response ⚡
                     ↓
-            [Async Compliance] (2-5s, user doesn't wait)
+            [Async Monitoring] (2-5s, user doesn't wait)
 ```
 
 ## How It Works
@@ -45,49 +45,34 @@ const response = await continum.llm.openai.gpt_4o.chat({
 
 **Key insight**: Continum never sits between you and the LLM provider.
 
-### 2. Async Mirroring
+### 2. Async Monitoring
 
-After returning the response, the SDK fires a non-blocking request:
+After returning the response, the SDK sends interaction details for monitoring:
 
 ```typescript
 // User already has response here ✅
 
 // SDK does this in background (not awaited):
-fetch('https://api.continum.co/audit/ingest', {
-  method: 'POST',
-  body: JSON.stringify({
-    sandboxSlug: 'your-sandbox-slug',
-    provider: 'openai',
-    model: 'gpt-4o',
-    prompt: 'Hello',
-    response: 'Hi there!',
-    metadata: { ... }
-  })
-});
+// Sends interaction details to Continum for compliance monitoring
 ```
 
-### 3. Queue Processing
+### 3. Compliance Processing
 
-The API immediately queues the audit and returns:
-
-```
-POST /audit/ingest → Validate → Queue for processing → Return 202 Accepted
-Total: < 50ms (but SDK doesn't wait for this either)
-```
-
-### 4. Compliance Processing
-
-The Compliance Engine processes audits asynchronously:
+Continum monitors your interaction asynchronously:
 
 ```
-Receive audit (2-5s later)
+Receive interaction details
   ↓
 Analyze for compliance violations
   ↓
-Stores signal in database
+Generate compliance signal
+  ↓
+Store as evidence
   ↓
 Appears in dashboard
 ```
+
+Total time: 2-5 seconds, but your user doesn't wait for this.
 
 ## Performance Comparison
 
@@ -116,11 +101,11 @@ const response = await continum.llm.openai.gpt_4o.chat({
 // Total latency: ~600ms (still acceptable)
 ```
 
-Guardian uses fast local pattern matching + lightweight ML models to detect PII in under 100ms.
+Guardian uses fast pattern matching and detection models to identify PII in under 100ms.
 
 ## Unified Flow
 
-Continum combines Guardian (pre-LLM) and Mirror (post-LLM) in one seamless flow:
+Continum combines Guardian (pre-LLM) and async monitoring (post-LLM) in one seamless flow:
 
 ```
 1. Guardian Check (< 100ms)
@@ -129,14 +114,13 @@ Continum combines Guardian (pre-LLM) and Mirror (post-LLM) in one seamless flow:
    ↓
 3. Return Response to User ⚡
    ↓
-4. Async Mirror Audit (2-5s, background)
+4. Async Monitoring (2-5s, background)
 ```
 
 Total user-facing latency: ~600ms (vs 2.5-5.5s with blocking compliance)
 
 ## Real-World Example
 
-```typescript
 ```typescript
 import { Continum } from '@continum/sdk';
 
@@ -167,8 +151,8 @@ console.log(response.content); // User sees response immediately
 // Meanwhile, in the background:
 // - Guardian detected SSN and email (< 100ms)
 // - Redacted before sending to OpenAI
-// - Mirror audit running in background (2-5s)
-// - Signal will appear in dashboard shortly
+// - Async monitoring running in background (2-5s)
+// - Compliance signal will appear in dashboard shortly
 ```
 
 ## Why This Matters
@@ -186,7 +170,7 @@ console.log(response.content); // User sees response immediately
 ### For Compliance Teams
 - 100% coverage of LLM interactions
 - Real-time dashboard monitoring
-- Audit trail for regulations
+- Audit-ready evidence for regulations
 
 ## Trade-offs
 
@@ -198,15 +182,15 @@ console.log(response.content); // User sees response immediately
 
 ### What You Accept
 ⚠️ Compliance results appear 2-5s after response (not inline)  
-⚠️ Can't block response based on post-LLM audit (use Guardian for pre-LLM blocking)  
+⚠️ Can't block response based on post-LLM monitoring (use Guardian for pre-LLM blocking)  
 
-## When to Use Guardian vs Mirror
+## When to Use Guardian vs Async Monitoring
 
 | Use Case | Solution | Latency | When to Use |
 |----------|----------|---------|-------------|
 | Block PII before LLM | Guardian | +100ms | User input might contain PII |
-| Audit for compliance | Mirror | +0ms | Post-hoc monitoring and reporting |
-| Both | Guardian + Mirror | +100ms | Maximum protection + monitoring |
+| Monitor for compliance | Async Monitoring | +0ms | Post-hoc monitoring and reporting |
+| Both | Guardian + Monitoring | +100ms | Maximum protection + evidence |
 
 ## Next Steps
 
@@ -214,13 +198,13 @@ console.log(response.content); // User sees response immediately
   <Card title="Guardian" icon="shield" href="/concepts/guardian">
     Learn about pre-LLM PII protection
   </Card>
-  <Card title="Mirror" icon="copy" href="/concepts/mirror">
-    Understand async audit mirroring
+  <Card title="Evidence" icon="file-certificate" href="/concepts/evidence">
+    Transform monitoring into audit-ready evidence
   </Card>
   <Card title="Architecture" icon="diagram-project" href="/concepts/architecture">
     Explore the full system architecture
   </Card>
   <Card title="SDK Configuration" icon="gear" href="/sdk/configuration">
-    Configure Guardian and Mirror settings
+    Configure Guardian and monitoring settings
   </Card>
 </CardGroup>

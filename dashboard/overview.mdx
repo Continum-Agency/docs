@@ -1,0 +1,298 @@
+---
+title: "Dashboard Overview"
+description: "Navigate the Continum compliance dashboard"
+---
+
+## Overview
+
+The Continum Dashboard provides a comprehensive view of your AI compliance monitoring. Access real-time signals, manage sandboxes, track incidents, and generate evidence packages.
+
+## Accessing the Dashboard
+
+Navigate to your dashboard:
+
+```
+https://app.continum.co/dashboard
+```
+
+Sign in with your GitHub account to access your compliance data.
+
+## Dashboard Sections
+
+### Signals
+
+View all compliance signals from your monitored interactions:
+
+- **Risk Level Breakdown**: Visual distribution of LOW, MEDIUM, HIGH, and CRITICAL signals
+- **Recent Signals**: Latest compliance detections
+- **Filters**: Filter by sandbox, provider, model, risk level, date range
+- **Search**: Find specific signals by ID or content
+- **Export**: Download signals in CSV, JSON, or PDF format
+
+**Quick Actions:**
+- View signal details
+- Create incidents from high-risk signals
+- Export compliance reports
+
+### Sandboxes
+
+Manage your monitoring configurations:
+
+- **Active Sandboxes**: View all configured sandboxes
+- **Sandbox Types**: PII Detection, Bias Detection, Security Audit, etc.
+- **Configuration**: Edit sandbox settings and rules
+- **Usage Stats**: Monitor sandbox usage and signal volume
+
+**Quick Actions:**
+- Create new sandbox
+- Edit sandbox configuration
+- View sandbox signals
+- Deactivate sandbox
+
+### Evidence
+
+Access compliance evidence and audit-ready reports:
+
+- **Hash Chain Verification**: Verify cryptographic integrity
+- **Regulatory Attestations**: View requirement mappings
+- **Incident Management**: Track high-risk incidents
+- **Evidence Packages**: Generate audit reports
+- **Coverage Analysis**: Monitor compliance coverage
+
+**Quick Actions:**
+- Verify hash chain
+- Generate evidence package
+- View attestations
+- Manage incidents
+
+### API Keys
+
+Manage your Continum API keys:
+
+- **Active Keys**: View all API keys
+- **Key Details**: Creation date, last used, status
+- **Usage Stats**: Monitor API usage per key
+
+**Quick Actions:**
+- Generate new API key
+- Revoke existing key
+- View key usage
+
+### Settings
+
+Configure your account and preferences:
+
+- **Account Information**: View and edit account details
+- **Plan & Billing**: Manage subscription and billing
+- **Team Members**: Invite and manage team members (Organization accounts)
+- **Notifications**: Configure email and webhook notifications
+- **Integrations**: Connect third-party services
+
+## Dashboard Metrics
+
+### Overview Cards
+
+Top-level metrics displayed on the dashboard:
+
+- **Total Signals**: All-time signal count
+- **This Month**: Signals generated this month
+- **High Risk**: HIGH and CRITICAL signals requiring attention
+- **Coverage**: Compliance coverage percentage
+
+### Risk Distribution
+
+Visual breakdown of signals by risk level:
+
+- **CRITICAL**: Severe violations requiring immediate action
+- **HIGH**: Serious violations requiring attention
+- **MEDIUM**: Issues that should be reviewed
+- **LOW**: Minor issues for monitoring
+
+### Trend Charts
+
+Historical data visualization:
+
+- **Signal Volume**: Signals over time
+- **Risk Trends**: Risk level distribution over time
+- **Provider Breakdown**: Signals by LLM provider
+- **Sandbox Activity**: Usage by sandbox
+
+## Filtering and Search
+
+### Global Filters
+
+Available across all dashboard sections:
+
+- **Date Range**: Filter by creation date
+- **Risk Level**: Filter by LOW, MEDIUM, HIGH, CRITICAL
+- **Sandbox**: Filter by specific sandbox
+- **Provider**: Filter by OpenAI, Anthropic, Gemini
+- **Model**: Filter by specific model
+
+### Search
+
+Search for specific items:
+
+- Signal IDs
+- Violation types
+- Keywords in reasoning
+- User metadata
+
+### Saved Filters
+
+Save frequently used filter combinations:
+
+1. Apply filters
+2. Click "Save Filter"
+3. Name your filter
+4. Access from "Saved Filters" dropdown
+
+## Exporting Data
+
+### Export Formats
+
+Export data in multiple formats:
+
+- **CSV**: Spreadsheet format for analysis
+- **JSON**: API format for programmatic access
+- **PDF**: Formatted report for sharing
+- **XLSX**: Excel format for advanced analysis
+
+### Export Options
+
+1. Apply filters to narrow data
+2. Click "Export"
+3. Select format
+4. Choose fields to include
+5. Download file
+
+## Notifications
+
+### Email Notifications
+
+Configure email alerts for:
+
+- High-risk signals detected
+- Incident status changes
+- Evidence package generated
+- Coverage below threshold
+- Hash chain tampering detected
+
+### Webhook Notifications
+
+Configure webhooks for real-time alerts:
+
+```json
+{
+  "url": "https://your-app.com/webhook",
+  "events": [
+    "signal.high",
+    "signal.critical",
+    "incident.created",
+    "incident.verified"
+  ]
+}
+```
+
+## Team Collaboration
+
+### Organization Accounts
+
+For teams using Organization accounts:
+
+- **Team Members**: Invite colleagues to your dashboard
+- **Role-Based Access**: Assign roles (Admin, Compliance Officer, Auditor, Viewer)
+- **Shared Sandboxes**: Team-wide monitoring configurations
+- **Collaborative Incident Management**: Multiple team members can work on incidents
+
+### Roles and Permissions
+
+- **Admin**: Full access to all features
+- **Compliance Officer**: Manage incidents and evidence
+- **Auditor**: Verify incidents and review evidence
+- **Viewer**: Read-only access to signals and reports
+
+## Mobile Access
+
+Access the dashboard on mobile devices:
+
+- Responsive design for all screen sizes
+- Touch-optimized interface
+- Push notifications for critical alerts
+- Quick actions for common tasks
+
+## Keyboard Shortcuts
+
+Speed up your workflow:
+
+- `Ctrl/Cmd + K`: Quick search
+- `Ctrl/Cmd + F`: Open filters
+- `Ctrl/Cmd + E`: Export current view
+- `Ctrl/Cmd + R`: Refresh data
+- `Ctrl/Cmd + N`: Create new (context-dependent)
+
+## Best Practices
+
+### Daily Workflow
+
+1. Review overnight signals
+2. Check for CRITICAL and HIGH risk items
+3. Create incidents for high-risk signals
+4. Update incident statuses
+5. Monitor coverage metrics
+
+### Weekly Workflow
+
+1. Review MEDIUM risk signals
+2. Analyze trend charts
+3. Update sandbox configurations
+4. Review team activity
+5. Export weekly reports
+
+### Monthly Workflow
+
+1. Generate evidence packages
+2. Review compliance coverage
+3. Analyze monthly trends
+4. Update compliance policies
+5. Team compliance review meeting
+
+## Troubleshooting
+
+### Dashboard Not Loading
+
+- Check internet connection
+- Clear browser cache
+- Try incognito/private mode
+- Contact support if issue persists
+
+### Missing Signals
+
+- Verify SDK is properly configured
+- Check API key is valid
+- Ensure sandbox exists
+- Review SDK logs for errors
+
+### Export Failing
+
+- Reduce date range
+- Apply filters to limit data
+- Try different format
+- Contact support for large exports
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Signals" icon="signal" href="/dashboard/signals">
+    View and manage compliance signals
+  </Card>
+  <Card title="Evidence" icon="file-certificate" href="/dashboard/evidence">
+    Access compliance evidence
+  </Card>
+  <Card title="API Keys" icon="key" href="/dashboard/api-keys">
+    Manage API keys
+  </Card>
+  <Card title="Sandboxes" icon="cube" href="/dashboard/sandboxes">
+    Configure monitoring
+  </Card>
+</CardGroup>

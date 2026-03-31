@@ -32,6 +32,10 @@ The `.continum.json` file controls how the CLI scans your project. It's created 
   This file should be committed to your repository so all team members use the same configuration.
 </Info>
 
+<Warning>
+  **Security:** The `.continum.json` file does NOT contain your API credentials. Your API key is stored securely in `~/.continum/credentials.json` (never committed) and is created when you run `continum login`.
+</Warning>
+
 ---
 
 ## Configuration Options
@@ -303,6 +307,44 @@ vim .continum.json
 git add .
 git commit -m "test new config"
 ```
+
+---
+
+## File Locations and Security
+
+Understanding where Continum stores different types of data:
+
+### `.continum.json` (Project Root)
+
+**Location:** Your project's root directory  
+**Purpose:** Scanner configuration  
+**Contains:**
+- Sandbox name
+- Block/warn rules
+- Ignore patterns
+- Custom patterns
+
+**Security:** ✅ Safe to commit to git
+
+### `~/.continum/credentials.json` (Home Directory)
+
+**Location:** Your home directory (`~/.continum/`)  
+**Purpose:** Authentication credentials  
+**Contains:**
+- API URL
+- API key
+
+**Security:** ❌ NEVER commit this file - it's in your home directory, not your project
+
+### `~/.continum/patterns.json` (Home Directory)
+
+**Location:** Your home directory (`~/.continum/`)  
+**Purpose:** Cached patterns from Continum API  
+**Contains:**
+- Downloaded pattern library
+- Team-approved patterns
+
+**Security:** ✅ Safe (no credentials), but no need to commit
 
 ---
 
