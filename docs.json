@@ -92,11 +92,6 @@
           "anchor": "Dashboard",
           "href": "https://app.continum.co",
           "icon": "chart-line"
-        },
-        {
-          "anchor": "GitHub",
-          "href": "https://github.com/continum",
-          "icon": "github"
         }
       ]
     }
