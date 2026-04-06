@@ -1,11 +1,14 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "linden",
   "name": "Continum",
   "colors": {
     "primary": "#18181b",
     "light": "#52525b",
     "dark": "#09090b"
+  },
+  "fonts": {
+    "family": "IBM Plex Sans"
   },
   "favicon": "/favicon.ico",
   "navigation": {
@@ -24,7 +27,11 @@
             "group": "SDK",
             "pages": [
               "sdk/installation",
-              "sdk/configuration"
+              "sdk/configuration",
+              "sdk/sandboxes",
+              "sdk/guardian",
+              "sdk/mirror"
+              
             ]
           },
           {

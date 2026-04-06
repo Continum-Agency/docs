@@ -7,7 +7,7 @@ description: "Install and set up the Continum SDK"
 
 Install the Continum SDK using your preferred package manager:
 
-**Current Version**: 0.0.5
+**Current Version**: 0.5.1
 
 <CodeGroup>
 
@@ -104,13 +104,13 @@ import { Continum } from '@continum/sdk';
 async function test() {
   const continum = new Continum({
     continumKey: process.env.CONTINUM_KEY,
-    openaiKey: process.env.OPENAI_API_KEY,
-    defaultSandbox: 'your-sandbox-slug'
+    openaiKey: process.env.OPENAI_API_KEY
   });
 
   try {
     const response = await continum.llm.openai.gpt_4o.chat({
-      messages: [{ role: 'user', content: 'Say hello' }]
+      messages: [{ role: 'user', content: 'Say hello' }],
+      sandbox: 'your-sandbox-slug'  // Specify sandbox
     });
     
     console.log('✅ SDK working!');

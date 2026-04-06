@@ -1,0 +1,437 @@
+---
+title: "Guardian (Pre-LLM Protection)"
+description: "Detect and redact PII before it reaches your LLM provider"
+---
+
+## Overview
+
+Guardian is Continum's **pre-LLM protection layer** that runs **before** your LLM call. It scans user input for PII and sensitive data, then either blocks, redacts, or allows the request based on your configuration.
+
+<Info>
+**Key Characteristics:**
+- Runs **synchronously** (blocks LLM call if needed)
+- Adds ~50-100ms latency
+- Can prevent LLM call entirely
+- Can modify prompt before LLM sees it
+</Info>
+
+## How It Works
+
+```
+User Input
+    ↓
+Guardian Scans (< 100ms)
+    ↓
+┌───────────────┐
+│ Action Type?  │
+└───────┬───────┘
+        │
+    ┌───┴───┐
+    │       │
+  BLOCK  REDACT/ALLOW
+    │       │
+    ↓       ↓
+  Error   LLM Call
+```
+
+## Automatic Integration
+
+Guardian runs automatically when enabled:
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  guardianConfig: {
+    enabled: true,  // Default: true
+    action: 'REDACT_AND_CONTINUE'  // Default
+  }
+});
+
+// Guardian runs automatically before LLM call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [
+    { role: 'user', content: 'My email is john@example.com' }
+  ]
+});
+
+// Behind the scenes:
+// 1. Guardian scans: Detects EMAIL
+// 2. Guardian redacts: "My email is [REDACTED_EMAIL]"
+// 3. LLM receives redacted prompt
+// 4. User gets response
+```
+
+## Configuration
+
+### Guardian Actions
+
+Configure how Guardian handles detected PII:
+
+<CodeGroup>
+
+```typescript REDACT_AND_CONTINUE (Default)
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  guardianConfig: {
+    action: 'REDACT_AND_CONTINUE'
+  }
+});
+
+// Behavior:
+// - Detects PII
+// - Redacts it
+// - Continues with LLM call
+// - User gets response
+```
+
+```typescript BLOCK_ON_DETECT
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  guardianConfig: {
+    action: 'BLOCK_ON_DETECT'
+  }
+});
+
+// Behavior:
+// - Detects PII
+// - Throws error immediately
+// - No LLM call made
+// - User gets error message
+```
+
+```typescript ALLOW_ALL
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  guardianConfig: {
+    action: 'ALLOW_ALL'
+  }
+});
+
+// Behavior:
+// - Detects PII
+// - Logs detection
+// - Allows original prompt
+// - Monitoring mode only
+```
+
+</CodeGroup>
+
+### Disable Guardian
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  guardianConfig: {
+    enabled: false  // Disable Guardian entirely
+  }
+});
+
+// Guardian skipped for all calls
+```
+
+### Per-Call Override
+
+```typescript
+// Skip Guardian for specific call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Test data' }],
+  skipGuardian: true  // Skip Guardian for this call only
+});
+```
+
+## Detected Entities
+
+Guardian detects the following PII types:
+
+### Personal Identifiers
+- **EMAIL**: Email addresses (`john@example.com`)
+- **PHONE**: Phone numbers (`+1-555-123-4567`)
+- **ADDRESS**: Physical addresses
+
+### Government IDs
+- **SSN**: US Social Security Numbers (`123-45-6789`)
+- **PASSPORT**: UK/US Passport numbers
+- **HEALTH_ID**: Medical record numbers
+
+### Financial Data
+- **CREDIT_CARD**: Credit/debit card numbers (`4111-1111-1111-1111`)
+
+### Sensitive Topics
+- **SENSITIVE_TOPIC**: Medical conditions, financial info, legal issues
+
+## Response Structure
+
+Guardian returns detailed information about detected entities:
+
+```typescript
+interface GuardianResult {
+  action: 'ALLOW' | 'REDACT' | 'BLOCK';
+  violations: string[];
+  reasoning: string;
+  cleanPrompt: string;
+  confidence: number;
+  detectedEntities: DetectedEntity[];
+  recommendations?: string[];
+}
+
+interface DetectedEntity {
+  type: 'EMAIL' | 'SSN' | 'PASSPORT' | 'CREDIT_CARD' | 'PHONE' | 'HEALTH_ID' | 'ADDRESS' | 'SENSITIVE_TOPIC';
+  originalValue: string;
+  redactedValue: string;
+  start: number;
+  end: number;
+  confidence: number;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+```
+
+### Example Response
+
+```json
+{
+  "action": "REDACT",
+  "violations": ["EMAIL_DETECTED", "SSN_DETECTED"],
+  "reasoning": "email j****@example.com detected, ssn ***-**-6789 detected",
+  "cleanPrompt": "My email is [REDACTED_EMAIL] and SSN is [REDACTED_SSN]",
+  "confidence": 0.95,
+  "detectedEntities": [
+    {
+      "type": "EMAIL",
+      "originalValue": "john@example.com",
+      "redactedValue": "j****@example.com",
+      "start": 12,
+      "end": 28,
+      "confidence": 0.95,
+      "severity": "HIGH"
+    },
+    {
+      "type": "SSN",
+      "originalValue": "123-45-6789",
+      "redactedValue": "***-**-6789",
+      "start": 40,
+      "end": 51,
+      "confidence": 0.85,
+      "severity": "CRITICAL"
+    }
+  ],
+  "recommendations": [
+    "Consider using placeholder emails in examples",
+    "Enable Guardian redaction for this sandbox"
+  ]
+}
+```
+
+## Manual Scanning
+
+You can manually scan prompts before sending to LLM:
+
+```typescript
+const result = await continum.scanPrompt(
+  'My email is john@example.com',
+  {
+    sandbox: 'pii_protection',
+    provider: 'openai',
+    model: 'gpt-4o'
+  }
+);
+
+if (result.action === 'BLOCK') {
+  console.error('PII detected, request blocked');
+  console.log('Violations:', result.violations);
+  console.log('Reasoning:', result.reasoning);
+} else if (result.action === 'REDACT') {
+  console.log('Using redacted prompt:', result.cleanPrompt);
+}
+```
+
+## Sandbox Configuration
+
+Guardian behavior is controlled by sandbox configuration:
+
+```typescript
+// Create sandbox with Guardian settings
+await continum.sandboxes.create({
+  slug: 'pii_strict',
+  name: 'Strict PII Protection',
+  sandboxType: 'PII_DETECTION',
+  guardianAction: 'BLOCK_ON_DETECT',  // Block if PII detected
+  alertThreshold: 'HIGH',
+  region: 'EU',
+  regulations: ['GDPR', 'EU_AI_ACT']
+});
+
+// Use sandbox in LLM call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: userInput }],
+  sandbox: 'pii_strict'  // Uses BLOCK_ON_DETECT action
+});
+```
+
+## Performance
+
+Guardian is optimized for production use:
+
+| Operation | Latency | Notes |
+|-----------|---------|-------|
+| Local pattern matching | 10-30ms | Regex-based |
+| Entity detection | 50-80ms | ML-based |
+| **Total Guardian overhead** | **< 100ms** | Acceptable for production |
+
+## Error Handling
+
+Handle Guardian blocks gracefully:
+
+```typescript
+try {
+  const response = await continum.llm.openai.gpt_4o.chat({
+    messages: [{ role: 'user', content: userInput }]
+  });
+  return response;
+} catch (error: any) {
+  if (error.message?.includes('Guardian blocked')) {
+    // PII detected, show user-friendly message
+    return {
+      error: 'Your message contains sensitive information. Please remove personal details and try again.',
+      violations: extractViolations(error.message)
+    };
+  }
+  throw error;
+}
+```
+
+## Use Cases
+
+### Customer Support Chat
+
+```typescript
+app.post('/api/chat', async (req, res) => {
+  const { message } = req.body;
+  
+  try {
+    const response = await continum.llm.openai.gpt_4o.chat({
+      messages: [
+        { role: 'system', content: 'You are a helpful support agent' },
+        { role: 'user', content: message }
+      ],
+      sandbox: 'support_pii_protection'
+    });
+    
+    res.json({ reply: response.content });
+  } catch (error: any) {
+    if (error.message?.includes('Guardian blocked')) {
+      res.status(400).json({
+        error: 'Please remove personal information from your message'
+      });
+    } else {
+      res.status(500).json({ error: 'Service error' });
+    }
+  }
+});
+```
+
+### Form Submission
+
+```typescript
+async function processForm(formData: FormData) {
+  // Scan form data before processing
+  const result = await continum.scanPrompt(
+    JSON.stringify(formData),
+    { sandbox: 'form_validation' }
+  );
+  
+  if (result.action === 'BLOCK') {
+    throw new Error('Form contains sensitive information');
+  }
+  
+  // Process with redacted data if needed
+  const cleanData = result.action === 'REDACT' 
+    ? JSON.parse(result.cleanPrompt)
+    : formData;
+  
+  return processWithLLM(cleanData);
+}
+```
+
+## Best Practices
+
+### When to Enable Guardian
+
+✅ **Enable Guardian when:**
+- Users can input free-form text
+- Application handles sensitive data
+- Compliance requires pre-LLM protection
+- GDPR/CCPA/HIPAA applies
+
+❌ **Skip Guardian when:**
+- Input is fully controlled (no user input)
+- Performance is critical (< 100ms not acceptable)
+- Data is already sanitized
+- Testing/development environment
+
+### Choosing Guardian Action
+
+**REDACT_AND_CONTINUE** (Recommended):
+- Best for most use cases
+- Maintains user experience
+- Protects LLM from PII
+- Logs violations for monitoring
+
+**BLOCK_ON_DETECT**:
+- Maximum protection
+- Use for highly sensitive applications
+- May frustrate users if false positives
+- Show helpful error message
+
+**ALLOW_ALL**:
+- Monitoring mode only
+- Use during testing/rollout
+- Logs detections without blocking
+- Upgrade to REDACT after validation
+
+## Limitations
+
+### False Positives
+
+Guardian may flag non-PII as PII:
+
+```
+"Call me at extension 1234" → Detected as phone number
+"My favorite number is 123-45-6789" → Detected as SSN
+```
+
+**Mitigation**: Use confidence thresholds and review Guardian scans in dashboard.
+
+### False Negatives
+
+Guardian may miss obfuscated PII:
+
+```
+"My email is john at example dot com" → Not detected
+"SSN: one two three four five six seven eight nine" → Not detected
+```
+
+**Mitigation**: Combine Guardian with post-LLM Mirror auditing for defense in depth.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Mirror" icon="copy" href="/sdk/mirror">
+    Learn about post-LLM auditing
+  </Card>
+  <Card title="Sandbox Management" icon="cube" href="/sdk/sandboxes">
+    Configure sandboxes programmatically
+  </Card>
+  <Card title="Configuration" icon="gear" href="/sdk/configuration">
+    Advanced SDK configuration
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/endpoint/guardian-scan">
+    Guardian API documentation
+  </Card>
+</CardGroup>

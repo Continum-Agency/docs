@@ -1,0 +1,539 @@
+---
+title: "Sandbox Management"
+description: "Create and manage sandboxes programmatically with the SDK"
+---
+
+## Overview
+
+The Continum SDK includes a `SandboxConfigClient` that allows you to create and manage sandboxes programmatically. This is useful for:
+
+- Creating sandboxes during application setup
+- Managing sandboxes in CI/CD pipelines
+- Dynamic sandbox configuration
+- Testing different compliance configurations
+
+<Info>
+**SDK vs Dashboard:**
+- **SDK**: Create and manage sandboxes in code
+- **Dashboard**: View violations, reports, and analytics
+
+The SDK is for **execution and configuration**, the dashboard is for **monitoring and reporting**.
+</Info>
+
+## Quick Start
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY }
+});
+
+// Create a sandbox
+const sandbox = await continum.sandboxes.create({
+  slug: 'pii_strict',
+  name: 'Strict PII Detection',
+  sandboxType: 'PII_DETECTION',
+  guardianAction: 'BLOCK_ON_DETECT',
+  alertThreshold: 'HIGH',
+  region: 'EU',
+  regulations: ['GDPR', 'EU_AI_ACT']
+});
+
+// Use the sandbox
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'pii_strict'
+});
+```
+
+## Available Methods
+
+### Create Sandbox
+
+Create a new sandbox configuration:
+
+```typescript
+const sandbox = await continum.sandboxes.create({
+  slug: 'my_sandbox',              // Required: unique identifier
+  name: 'My Sandbox',              // Required: human-readable name
+  sandboxType: 'PII_DETECTION',    // Required: sandbox type
+  description: 'Optional description',
+  customRules: ['No medical advice'],
+  alertThreshold: 'HIGH',
+  guardianAction: 'REDACT_AND_CONTINUE',
+  region: 'EU',
+  regulations: ['GDPR', 'EU_AI_ACT']
+});
+
+console.log(`Created sandbox: ${sandbox.slug}`);
+```
+
+### List Sandboxes
+
+Get all sandboxes for your account:
+
+```typescript
+const sandboxes = await continum.sandboxes.list();
+
+console.log(`You have ${sandboxes.length} sandboxes:`);
+sandboxes.forEach(s => {
+  console.log(`- ${s.slug}: ${s.name} (${s.active ? 'active' : 'paused'})`);
+  console.log(`  Type: ${s.sandboxType}`);
+  console.log(`  Guardian: ${s.guardianAction}`);
+  console.log(`  Scans: ${s._count?.guardianScans || 0}`);
+});
+```
+
+### Get Sandbox
+
+Get details of a specific sandbox:
+
+```typescript
+const sandbox = await continum.sandboxes.get('pii_strict');
+
+console.log('Sandbox details:');
+console.log(`- Name: ${sandbox.name}`);
+console.log(`- Type: ${sandbox.sandboxType}`);
+console.log(`- Guardian Action: ${sandbox.guardianAction}`);
+console.log(`- Alert Threshold: ${sandbox.alertThreshold}`);
+console.log(`- Region: ${sandbox.region}`);
+console.log(`- Regulations: ${sandbox.regulations.join(', ')}`);
+console.log(`- Active: ${sandbox.active}`);
+```
+
+### Update Sandbox
+
+Update an existing sandbox:
+
+```typescript
+const updated = await continum.sandboxes.update('pii_strict', {
+  alertThreshold: 'CRITICAL',
+  customRules: ['Flag partial card numbers', 'Detect health IDs'],
+  description: 'Updated description'
+});
+
+console.log('Sandbox updated successfully');
+```
+
+### Toggle Sandbox
+
+Pause or resume a sandbox:
+
+```typescript
+// Pause sandbox
+await continum.sandboxes.toggle('pii_strict');
+console.log('Sandbox paused');
+
+// Resume sandbox
+await continum.sandboxes.toggle('pii_strict');
+console.log('Sandbox resumed');
+```
+
+### Delete Sandbox
+
+Delete a sandbox:
+
+```typescript
+await continum.sandboxes.delete('old_sandbox');
+console.log('Sandbox deleted');
+```
+
+## Sandbox Configuration
+
+### Required Fields
+
+<ParamField path="slug" type="string" required>
+  Unique identifier for the sandbox. Must be lowercase, alphanumeric, and use underscores.
+  
+  **Examples:** `pii_strict`, `code_security`, `support_audit`
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Human-readable name for the sandbox.
+  
+  **Example:** `"Strict PII Detection"`
+</ParamField>
+
+<ParamField path="sandboxType" type="SandboxType" required>
+  Type of compliance checking to perform.
+  
+  **Options:**
+  - `PII_DETECTION` - Detect personally identifiable information
+  - `BIAS_DETECTION` - Detect discriminatory content
+  - `SECURITY_AUDIT` - Detect security vulnerabilities
+  - `PROMPT_INJECTION` - Detect prompt manipulation
+  - `DATA_EXFILTRATION` - Detect data leakage
+  - `REGULATORY_COMPLIANCE` - Check regulatory compliance
+  - `AGENT_SAFETY` - Monitor agent behavior
+  - `HALLUCINATION_DETECTION` - Detect false information
+  - `CONTENT_POLICY` - Enforce content guidelines
+  - `FINANCIAL_COMPLIANCE` - Financial regulation compliance
+  - `LEGAL_COMPLIANCE` - Legal liability checks
+  - `MULTI_TURN_ATTACK` - Detect multi-step attacks
+  - `SUPPLY_CHAIN_INTEGRITY` - Verify supply chain security
+  - `FULL_SPECTRUM` - Comprehensive checking
+  - `CUSTOM` - Custom rules
+</ParamField>
+
+### Optional Fields
+
+<ParamField path="description" type="string">
+  Optional description of the sandbox purpose.
+</ParamField>
+
+<ParamField path="customRules" type="string[]">
+  Additional custom rules specific to your use case.
+  
+  **Example:** `["No medical advice", "No financial recommendations"]`
+</ParamField>
+
+<ParamField path="alertThreshold" type="RiskLevel" default="HIGH">
+  Minimum risk level to alert on.
+  
+  **Options:** `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+</ParamField>
+
+<ParamField path="guardianAction" type="GuardianActionConfig" default="REDACT_AND_CONTINUE">
+  How Guardian handles pre-LLM detections.
+  
+  **Options:**
+  - `ALLOW_ALL` - Log but don't redact
+  - `REDACT_AND_CONTINUE` - Redact and continue (default)
+  - `BLOCK_ON_DETECT` - Block LLM call
+</ParamField>
+
+<ParamField path="region" type="Region" default="GLOBAL">
+  Geographic region for compliance.
+  
+  **Options:** `GLOBAL`, `EU`, `US`, `RW`, `UG`
+</ParamField>
+
+<ParamField path="regulations" type="string[]" default="['GDPR', 'EU_AI_ACT']">
+  Which regulations to check against.
+  
+  **Example:** `["GDPR", "CCPA", "HIPAA", "EU_AI_ACT"]`
+</ParamField>
+
+## Use Cases
+
+### Application Setup
+
+Create sandboxes during application initialization:
+
+```typescript
+// setup.ts
+import { Continum } from '@continum/sdk';
+
+async function setupSandboxes() {
+  const continum = new Continum({
+    continumKey: process.env.CONTINUM_KEY!,
+    apiKeys: { openai: process.env.OPENAI_API_KEY }
+  });
+  
+  // Create sandboxes for different features
+  await continum.sandboxes.create({
+    slug: 'customer_support',
+    name: 'Customer Support PII Protection',
+    sandboxType: 'PII_DETECTION',
+    guardianAction: 'REDACT_AND_CONTINUE',
+    alertThreshold: 'HIGH'
+  });
+  
+  await continum.sandboxes.create({
+    slug: 'code_generation',
+    name: 'Code Security Audit',
+    sandboxType: 'SECURITY_AUDIT',
+    guardianAction: 'ALLOW_ALL',
+    alertThreshold: 'MEDIUM'
+  });
+  
+  await continum.sandboxes.create({
+    slug: 'content_moderation',
+    name: 'Content Policy Enforcement',
+    sandboxType: 'CONTENT_POLICY',
+    guardianAction: 'BLOCK_ON_DETECT',
+    alertThreshold: 'MEDIUM'
+  });
+  
+  console.log('Sandboxes created successfully');
+}
+
+setupSandboxes();
+```
+
+### CI/CD Pipeline
+
+Create test sandboxes in CI/CD:
+
+```typescript
+// scripts/setup-test-sandboxes.ts
+import { Continum } from '@continum/sdk';
+
+async function setupTestSandboxes() {
+  const continum = new Continum({
+    continumKey: process.env.CONTINUM_KEY!,
+    apiKeys: { openai: process.env.OPENAI_API_KEY }
+  });
+  
+  // Create test sandbox
+  await continum.sandboxes.create({
+    slug: 'ci_test_sandbox',
+    name: 'CI/CD Test Sandbox',
+    sandboxType: 'FULL_SPECTRUM',
+    guardianAction: 'ALLOW_ALL',  // Don't block in tests
+    alertThreshold: 'LOW'  // Catch everything
+  });
+  
+  console.log('Test sandbox created');
+}
+
+// Run in GitHub Actions, Jenkins, etc.
+setupTestSandboxes();
+```
+
+### Dynamic Configuration
+
+Adjust sandbox configuration based on environment:
+
+```typescript
+async function configureSandbox(environment: 'dev' | 'staging' | 'prod') {
+  const continum = new Continum({
+    continumKey: process.env.CONTINUM_KEY!,
+    apiKeys: { openai: process.env.OPENAI_API_KEY }
+  });
+  
+  const config = {
+    dev: {
+      guardianAction: 'ALLOW_ALL' as const,
+      alertThreshold: 'LOW' as const
+    },
+    staging: {
+      guardianAction: 'REDACT_AND_CONTINUE' as const,
+      alertThreshold: 'MEDIUM' as const
+    },
+    prod: {
+      guardianAction: 'BLOCK_ON_DETECT' as const,
+      alertThreshold: 'HIGH' as const
+    }
+  };
+  
+  await continum.sandboxes.update('main_sandbox', config[environment]);
+  console.log(`Sandbox configured for ${environment}`);
+}
+```
+
+### Multi-Tenant Setup
+
+Create sandboxes per tenant:
+
+```typescript
+async function createTenantSandbox(tenantId: string, tenantName: string) {
+  const continum = new Continum({
+    continumKey: process.env.CONTINUM_KEY!,
+    apiKeys: { openai: process.env.OPENAI_API_KEY }
+  });
+  
+  await continum.sandboxes.create({
+    slug: `tenant_${tenantId}`,
+    name: `${tenantName} Sandbox`,
+    sandboxType: 'FULL_SPECTRUM',
+    guardianAction: 'REDACT_AND_CONTINUE',
+    alertThreshold: 'HIGH',
+    customRules: [`Tenant: ${tenantName}`]
+  });
+  
+  console.log(`Sandbox created for tenant: ${tenantName}`);
+}
+```
+
+## Error Handling
+
+Handle common errors gracefully:
+
+```typescript
+try {
+  await continum.sandboxes.create({
+    slug: 'my_sandbox',
+    name: 'My Sandbox',
+    sandboxType: 'PII_DETECTION'
+  });
+} catch (error: any) {
+  if (error.message.includes('already exists')) {
+    console.log('Sandbox already exists, updating instead');
+    await continum.sandboxes.update('my_sandbox', {
+      name: 'My Updated Sandbox'
+    });
+  } else if (error.message.includes('plan limit')) {
+    console.error('Plan limit reached. Upgrade to create more sandboxes.');
+  } else {
+    throw error;
+  }
+}
+```
+
+## Plan Limits
+
+Sandbox limits vary by plan:
+
+| Plan | Max Sandboxes | Audits/Month |
+|------|---------------|--------------|
+| DEV | 1 | 1,000 |
+| PRO | 10 | Unlimited |
+| PRO_MAX | 25 | Unlimited |
+| ENTERPRISE | Unlimited | Unlimited |
+
+Check your current usage:
+
+```typescript
+const sandboxes = await continum.sandboxes.list();
+console.log(`Using ${sandboxes.length} sandboxes`);
+
+// Check plan limits in dashboard
+```
+
+## Best Practices
+
+### Naming Convention
+
+Use descriptive, consistent slugs:
+
+```typescript
+✅ Good:
+- customer_support_pii
+- code_security_audit
+- content_moderation_strict
+
+❌ Bad:
+- sandbox1
+- test
+- my-sandbox (use underscores, not hyphens)
+```
+
+### Sandbox Per Feature
+
+Create dedicated sandboxes for different features:
+
+```typescript
+// Customer support
+sandbox: 'support_pii_protection'
+
+// Code generation
+sandbox: 'code_security_audit'
+
+// Content creation
+sandbox: 'content_policy_check'
+
+// General use
+sandbox: 'general_audit'
+```
+
+### Environment-Specific Configuration
+
+Use different configurations per environment:
+
+```typescript
+const guardianAction = process.env.NODE_ENV === 'production'
+  ? 'BLOCK_ON_DETECT'
+  : 'ALLOW_ALL';
+
+await continum.sandboxes.update('main_sandbox', {
+  guardianAction
+});
+```
+
+### Testing Before Production
+
+Test sandbox configuration before deploying:
+
+```typescript
+// 1. Create test sandbox
+await continum.sandboxes.create({
+  slug: 'test_sandbox',
+  name: 'Test Sandbox',
+  sandboxType: 'PII_DETECTION',
+  guardianAction: 'ALLOW_ALL'  // Don't block during testing
+});
+
+// 2. Run test calls
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Test with PII: john@example.com' }],
+  sandbox: 'test_sandbox'
+});
+
+// 3. Review signals in dashboard
+
+// 4. Update to production settings
+await continum.sandboxes.update('test_sandbox', {
+  guardianAction: 'BLOCK_ON_DETECT'
+});
+```
+
+## TypeScript Support
+
+Full TypeScript support with autocomplete:
+
+```typescript
+import type { 
+  SandboxType, 
+  RiskLevel, 
+  GuardianActionConfig,
+  CreateSandboxDto,
+  UpdateSandboxDto,
+  SandboxConfig
+} from '@continum/sdk';
+
+const createDto: CreateSandboxDto = {
+  slug: 'my_sandbox',
+  name: 'My Sandbox',
+  sandboxType: 'PII_DETECTION',  // Autocomplete!
+  alertThreshold: 'HIGH',         // Autocomplete!
+  guardianAction: 'BLOCK_ON_DETECT'  // Autocomplete!
+};
+
+const sandbox: SandboxConfig = await continum.sandboxes.create(createDto);
+```
+
+## API Reference
+
+### SandboxConfigClient Methods
+
+```typescript
+class SandboxConfigClient {
+  // Create sandbox
+  async create(dto: CreateSandboxDto): Promise<SandboxConfig>
+  
+  // List all sandboxes
+  async list(): Promise<SandboxListResponse[]>
+  
+  // Get sandbox by slug
+  async get(slug: string): Promise<SandboxConfig>
+  
+  // Update sandbox
+  async update(slug: string, dto: UpdateSandboxDto): Promise<SandboxConfig>
+  
+  // Toggle active state
+  async toggle(slug: string): Promise<SandboxConfig>
+  
+  // Delete sandbox
+  async delete(slug: string): Promise<{ message: string }>
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Guardian" icon="shield" href="/sdk/guardian">
+    Configure pre-LLM protection
+  </Card>
+  <Card title="Mirror" icon="copy" href="/sdk/mirror">
+    Configure post-LLM auditing
+  </Card>
+  <Card title="Sandbox Concepts" icon="cube" href="/concepts/sandbox">
+    Learn about sandbox types
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/endpoint/sandboxes">
+    Sandbox API documentation
+  </Card>
+</CardGroup>

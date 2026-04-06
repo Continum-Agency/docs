@@ -5,7 +5,7 @@ description: "Configure the Continum SDK for your use case"
 
 ## SDK Version
 
-**Current Version**: 0.0.5
+**Current Version**: 0.5.1
 
 ## Model Naming Convention
 
@@ -76,9 +76,6 @@ const continum = new Continum({
     gemini?: string;
   };
   
-  // Optional
-  defaultSandbox?: string;
-  
   // Guardian configuration
   guardianConfig?: {
     enabled?: boolean;
@@ -127,33 +124,6 @@ const continum = new Continum({
 ```
 
 ## Optional Configuration
-
-### defaultSandbox
-
-The default sandbox to use for all audits (optional but recommended):
-
-```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  defaultSandbox: 'your-sandbox-slug'  // Use this sandbox by default
-});
-
-// Uses default sandbox
-const response1 = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
-});
-
-// Override per call
-const response2 = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'another-sandbox'  // Override default
-});
-```
-
-<Warning>
-  If no `defaultSandbox` is set, you must specify `sandbox` in each call. Calls without a sandbox will not be audited.
-</Warning>
 
 ### guardianConfig
 
@@ -233,10 +203,15 @@ const continum = new Continum({
 const continum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
   openaiKey: process.env.OPENAI_API_KEY,
-  defaultSandbox: 'dev-sandbox',
   guardianConfig: {
     enabled: false  // Disable for faster iteration
   }
+});
+
+// Specify sandbox per call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'dev-sandbox'
 });
 ```
 
@@ -246,7 +221,6 @@ const continum = new Continum({
 const continum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
   openaiKey: process.env.OPENAI_API_KEY,
-  defaultSandbox: 'prod-sandbox',
   guardianConfig: {
     enabled: true,
     action: 'REDACT_AND_CONTINUE'
@@ -255,23 +229,28 @@ const continum = new Continum({
     enabled: true
   }
 });
+
+// Specify sandbox per call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'prod-sandbox'
+});
 ```
 
 ## Per-Call Configuration
 
-Override configuration for individual calls:
+Specify sandbox and override configuration for individual calls:
 
 ```typescript
 const continum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  defaultSandbox: 'pii_strict'
+  openaiKey: process.env.OPENAI_API_KEY
 });
 
-// Override sandbox for this call
+// Specify sandbox for this call
 const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'security_audit',  // Use different sandbox
+  sandbox: 'security_audit',  // Required for auditing
   guardianEnabled: false,     // Disable Guardian for this call
   metadata: {
     userId: 'user_123',
@@ -279,6 +258,10 @@ const response = await continum.llm.openai.gpt_4o.chat({
   }
 });
 ```
+
+<Warning>
+  The `sandbox` parameter is required for Guardian and Mirror to function. Calls without a sandbox will not be audited.
+</Warning>
 
 ## Multiple Instances
 
@@ -289,7 +272,6 @@ Create multiple Continum instances for different use cases:
 const supportContinum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
   openaiKey: process.env.OPENAI_API_KEY,
-  defaultSandbox: 'support-sandbox',
   guardianConfig: {
     enabled: true,
     action: 'REDACT_AND_CONTINUE'
@@ -300,19 +282,20 @@ const supportContinum = new Continum({
 const codeContinum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
   openaiKey: process.env.OPENAI_API_KEY,
-  defaultSandbox: 'code-sandbox',
   guardianConfig: {
     enabled: false
   }
 });
 
-// Use appropriate instance
+// Use appropriate instance with explicit sandbox
 const supportResponse = await supportContinum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Help me with my account' }]
+  messages: [{ role: 'user', content: 'Help me with my account' }],
+  sandbox: 'support-sandbox'
 });
 
 const codeResponse = await codeContinum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Write a function to sort an array' }]
+  messages: [{ role: 'user', content: 'Write a function to sort an array' }],
+  sandbox: 'code-sandbox'
 });
 ```
 
@@ -353,8 +336,7 @@ function createContinum() {
   return new Continum({
     continumKey: process.env.CONTINUM_KEY,
     openaiKey: process.env.OPENAI_API_KEY,
-    anthropicKey: process.env.ANTHROPIC_API_KEY,
-    defaultSandbox: process.env.DEFAULT_SANDBOX || 'your-sandbox-slug'
+    anthropicKey: process.env.ANTHROPIC_API_KEY
   });
 }
 
@@ -372,7 +354,6 @@ import { Continum } from '@continum/sdk';
 export const continum = new Continum({
   continumKey: process.env.CONTINUM_KEY!,
   openaiKey: process.env.OPENAI_API_KEY,
-  defaultSandbox: 'your-sandbox-slug',
   guardianConfig: {
     enabled: true
   }
@@ -382,7 +363,8 @@ export const continum = new Continum({
 import { continum } from './continum';
 
 const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox per call
 });
 ```
 

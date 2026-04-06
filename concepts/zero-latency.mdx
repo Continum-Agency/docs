@@ -38,7 +38,8 @@ const continum = new Continum({
 
 // This calls OpenAI directly, no proxy
 const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'
 });
 // Response in ~500ms, same as direct OpenAI call
 ```
@@ -94,7 +95,8 @@ const continum = new Continum({
 });
 
 const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'My email is john@example.com' }]
+  messages: [{ role: 'user', content: 'My email is john@example.com' }],
+  sandbox: 'your-sandbox-slug'
 });
 // Guardian detects PII in < 100ms
 // Redacts before sending to OpenAI
@@ -127,7 +129,6 @@ import { Continum } from '@continum/sdk';
 const continum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
   openaiKey: process.env.OPENAI_API_KEY,
-  defaultSandbox: 'your-sandbox-slug',
   guardianConfig: {
     enabled: true,
     action: 'REDACT_AND_CONTINUE'
@@ -140,7 +141,8 @@ const userMessage = 'My SSN is 123-45-6789 and email is john@example.com';
 const start = Date.now();
 
 const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: userMessage }]
+  messages: [{ role: 'user', content: userMessage }],
+  sandbox: 'your-sandbox-slug'
 });
 
 const latency = Date.now() - start;

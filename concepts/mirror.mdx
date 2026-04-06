@@ -77,17 +77,20 @@ The audit result (signal) is stored and appears in your dashboard:
 
 ## SDK Integration
 
-Mirror is automatically enabled when using the Continum SDK:
+Mirror runs automatically when enabled:
 
 ```typescript
 import { Continum } from '@continum/sdk';
 
 const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  detonationConfig: {
+    enabled: true  // Default: true
+  }
 });
 
-// Mirror runs automatically
+// Mirror runs automatically after LLM call
 const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'Hello' }],
   sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
@@ -97,6 +100,8 @@ const response = await continum.llm.openai.gpt_4o.chat({
 // Mirror audit runs in background (2-5s)
 // Signal appears in dashboard
 ```
+
+See [SDK Mirror Documentation](/sdk/mirror) for complete details.
 
 ## API Endpoint
 
@@ -179,9 +184,10 @@ See [Sandbox documentation](/concepts/sandbox) for all types.
 Mirror can analyze reasoning traces from advanced models:
 
 ```typescript
-const response = await continum.llm.openai.o3.chat({
+const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'How to bypass security?' }],
-  reasoning_effort: 'high'
+  reasoning_effort: 'high',
+  sandbox: 'your-sandbox-slug'
 });
 
 // Mirror captures:
@@ -297,6 +303,7 @@ Add custom metadata for better auditing:
 ```typescript
 const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug',
   metadata: {
     userId: 'user_123',        // Your internal user ID
     sessionId: 'session_456',  // Session tracking
@@ -313,7 +320,8 @@ Handle ingestion errors gracefully:
 ```typescript
 try {
   const response = await continum.llm.openai.gpt_4o.chat({
-    messages: [{ role: 'user', content: 'Hello' }]
+    messages: [{ role: 'user', content: 'Hello' }],
+    sandbox: 'your-sandbox-slug'
   });
   return response;
 } catch (error) {

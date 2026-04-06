@@ -5,15 +5,21 @@ description: "Complete guide to model naming in Continum SDK"
 
 ## SDK Version
 
-**Current Version**: 0.0.5
+**Current Version**: 0.5.1
 
-**Latest Changes (v0.0.5)**:
+**Latest Changes (v0.5.1)**:
+- **BREAKING**: Removed `defaultSandbox` configuration option
+- Sandbox must now be explicitly specified in each call
+- Improved clarity and flexibility for sandbox usage
+- All examples updated to show explicit sandbox specification
+
+**Previous Changes (v0.5.0)**:
 - Fixed `max_tokens` validation for thinking models (Opus, Sonnet 4)
 - Thinking budget set to 1000 tokens (reduced from 8000)
 - SDK automatically adjusts `max_tokens` if too low (sets to 3048)
 - Better handling of token limits for thinking models
 
-**Previous Changes (v0.0.4)**:
+**Previous Changes (v0.5.0)**:
 - Added support for legacy `claude_3_5_sonnet` format
 - Fixed model name transformation bug
 - All Anthropic model formats now supported
@@ -145,28 +151,31 @@ const continum = new Continum({
     openai: process.env.OPENAI_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,
     gemini: process.env.GEMINI_API_KEY
-  },
-  defaultSandbox: 'your-sandbox-slug'
+  }
 });
 
 // OpenAI
 const response1 = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 // Anthropic (recommended format)
 const response2 = await continum.llm.anthropic.opus_4_6.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 // Anthropic (legacy format - also works)
 const response3 = await continum.llm.anthropic.claude_3_5_sonnet.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 // Gemini
 const response4 = await continum.llm.gemini.gemini_2_5_pro.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -182,7 +191,8 @@ const models = [
 
 for (const model of models) {
   const response = await model.chat({
-    messages: [{ role: 'user', content: 'Test' }]
+    messages: [{ role: 'user', content: 'Test' }],
+    sandbox: 'your-sandbox-slug'
   });
   console.log(response.content);
 }
@@ -198,7 +208,8 @@ function getModel(provider: string, modelName: string) {
 // Use dynamically
 const model = getModel('anthropic', 'opus_4_6');
 const response = await model.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -234,7 +245,8 @@ const response = await continum.llm.openai.gpt_4o.chat({
       { type: 'text', text: 'What is in this image?' },
       { type: 'image_url', image_url: 'https://example.com/image.jpg' }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -245,7 +257,8 @@ All models support streaming:
 ```typescript
 const stream = await continum.llm.anthropic.opus_4_6.chat({
   messages: [{ role: 'user', content: 'Write a story' }],
-  stream: true
+  stream: true,
+  sandbox: 'your-sandbox-slug'
 });
 
 for await (const chunk of stream) {
@@ -313,7 +326,18 @@ const continum = new Continum({
 
 ## Version History
 
-### v0.0.4 (Current)
+### v0.5.0 (Current)
+- ✅ **BREAKING**: Removed `defaultSandbox` configuration option
+- ✅ Sandbox must be explicitly specified in each call
+- ✅ Improved documentation clarity
+- ✅ Better flexibility for multi-sandbox applications
+
+### v0.0.5
+- ✅ Fixed `max_tokens` validation for thinking models
+- ✅ Thinking budget set to 1000 tokens
+- ✅ SDK automatically adjusts `max_tokens` if too low
+
+### v0.0.4
 - ✅ Added support for `claude_3_5_sonnet` legacy format
 - ✅ Fixed double-prefix bug in model name transformation
 - ✅ All Anthropic model formats now supported

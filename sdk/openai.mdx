@@ -27,15 +27,15 @@ const continum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
   apiKeys: {
     openai: process.env.OPENAI_API_KEY
-  },
-  defaultSandbox: 'your-sandbox-slug'
+  }
 });
 
 const response = await continum.llm.openai.gpt_4o.chat({
   messages: [
     { role: 'system', content: 'You are a helpful assistant.' },
     { role: 'user', content: 'What is the capital of France?' }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
 });
 
 console.log(response.content);
@@ -50,7 +50,8 @@ const response = await continum.llm.openai.o3.chat({
   messages: [
     { role: 'user', content: 'Solve this complex problem step by step...' }
   ],
-  reasoning_effort: 'high'  // Options: 'low', 'medium', 'high'
+  reasoning_effort: 'high',  // Options: 'low', 'medium', 'high'
+  sandbox: 'your-sandbox-slug'
 });
 
 // Access the reasoning trace
@@ -76,7 +77,8 @@ const response = await continum.llm.openai.gpt_4o.chat({
         }
       }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -112,7 +114,8 @@ const response = await continum.llm.openai.gpt_4o.chat({
       }
     }
   ],
-  tool_choice: 'auto'
+  tool_choice: 'auto',
+  sandbox: 'your-sandbox-slug'
 });
 
 // Check if model wants to call a function
@@ -132,7 +135,8 @@ const stream = await continum.llm.openai.gpt_4o.chat({
   messages: [
     { role: 'user', content: 'Write a long story about a robot.' }
   ],
-  stream: true
+  stream: true,
+  sandbox: 'your-sandbox-slug'
 });
 
 for await (const chunk of stream) {
@@ -148,7 +152,8 @@ for await (const chunk of stream) {
 const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'Be creative!' }],
   temperature: 0.9,  // 0.0 to 2.0 (higher = more creative)
-  top_p: 0.95
+  top_p: 0.95,
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -157,7 +162,8 @@ const response = await continum.llm.openai.gpt_4o.chat({
 ```typescript
 const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'Summarize briefly.' }],
-  maxTokens: 100  // Limit response length
+  maxTokens: 100,  // Limit response length
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -166,7 +172,8 @@ const response = await continum.llm.openai.gpt_4o.chat({
 ```typescript
 const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'Return JSON with name and age.' }],
-  response_format: { type: 'json_object' }
+  response_format: { type: 'json_object' },
+  sandbox: 'your-sandbox-slug'
 });
 
 const data = JSON.parse(response.content);
@@ -178,7 +185,8 @@ Track token consumption:
 
 ```typescript
 const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello!' }]
+  messages: [{ role: 'user', content: 'Hello!' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 console.log('Input tokens:', response.promptTokens);
@@ -191,7 +199,8 @@ console.log('Total tokens:', response.promptTokens + response.outputTokens);
 ```typescript
 try {
   const response = await continum.llm.openai.gpt_4o.chat({
-    messages: [{ role: 'user', content: 'Hello' }]
+    messages: [{ role: 'user', content: 'Hello' }],
+    sandbox: 'your-sandbox-slug'
   });
 } catch (error) {
   if (error.message.includes('rate_limit')) {
@@ -211,13 +220,15 @@ try {
 ```typescript
 // For simple tasks - use GPT-4o (fast and cheap)
 const simple = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'What is 2+2?' }]
+  messages: [{ role: 'user', content: 'What is 2+2?' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 // For complex reasoning - use o3
 const complex = await continum.llm.openai.o3.chat({
   messages: [{ role: 'user', content: 'Solve this complex math problem...' }],
-  reasoning_effort: 'high'
+  reasoning_effort: 'high',
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -226,7 +237,8 @@ const complex = await continum.llm.openai.o3.chat({
 ```typescript
 const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'Summarize this article...' }],
-  maxTokens: 500  // Prevent runaway costs
+  maxTokens: 500,  // Prevent runaway costs
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -240,7 +252,8 @@ const response = await continum.llm.openai.gpt_4o.chat({
       content: 'You are a helpful assistant that always responds in JSON format.'
     },
     { role: 'user', content: 'Tell me about Paris.' }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 

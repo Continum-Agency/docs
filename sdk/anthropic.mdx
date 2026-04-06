@@ -31,14 +31,14 @@ const continum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
   apiKeys: {
     anthropic: process.env.ANTHROPIC_API_KEY
-  },
-  defaultSandbox: 'your-sandbox-slug'
+  }
 });
 
 const response = await continum.llm.anthropic.opus_4_6.chat({
   messages: [
     { role: 'user', content: 'What is the capital of France?' }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
 });
 
 console.log(response.content);
@@ -56,7 +56,8 @@ Claude Opus and Sonnet 4 models support extended thinking for complex reasoning:
 const response = await continum.llm.anthropic.opus_4_6.chat({
   messages: [
     { role: 'user', content: 'Solve this complex problem step by step...' }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'
 });
 
 // Access the thinking process
@@ -76,13 +77,15 @@ The SDK automatically enables thinking for capable models with a budget of 1000 
 // ✅ Correct - max_tokens > thinking budget
 const response = await continum.llm.anthropic.opus_4_6.chat({
   messages: [{ role: 'user', content: 'Complex task...' }],
-  maxTokens: 5000  // Must be > 1000
+  maxTokens: 5000,  // Must be > 1000
+  sandbox: 'your-sandbox-slug'
 });
 
 // ✅ Auto-adjusted - SDK will set to 3048
 const response = await continum.llm.anthropic.opus_4_6.chat({
   messages: [{ role: 'user', content: 'Complex task...' }],
-  maxTokens: 500  // Too low, SDK adjusts to 3048
+  maxTokens: 500,  // Too low, SDK adjusts to 3048
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -95,7 +98,8 @@ const response = await continum.llm.anthropic.sonnet_4_6.chat({
   messages: [
     { role: 'user', content: 'Tell me about Paris.' }
   ],
-  systemPrompt: 'You are a helpful travel guide assistant.'
+  systemPrompt: 'You are a helpful travel guide assistant.',
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -121,7 +125,8 @@ const response = await continum.llm.anthropic.opus_4_6.chat({
         }
       }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -142,7 +147,8 @@ const response = await continum.llm.anthropic.opus_4_6.chat({
         }
       }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -175,7 +181,8 @@ const response = await continum.llm.anthropic.sonnet_4_6.chat({
         required: ['location']
       }
     }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'
 });
 
 // Check if Claude wants to use a tool
@@ -199,7 +206,8 @@ const messages = [
 
 const response = await continum.llm.anthropic.sonnet_4_6.chat({
   messages,
-  systemPrompt: 'You are a helpful travel planning assistant.'
+  systemPrompt: 'You are a helpful travel planning assistant.',
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -210,7 +218,8 @@ const response = await continum.llm.anthropic.sonnet_4_6.chat({
 ```typescript
 const response = await continum.llm.anthropic.haiku_4_5.chat({
   messages: [{ role: 'user', content: 'Be creative!' }],
-  temperature: 0.9  // 0.0 to 1.0 (higher = more creative)
+  temperature: 0.9,  // 0.0 to 1.0 (higher = more creative)
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -223,7 +232,8 @@ const response = await continum.llm.anthropic.haiku_4_5.chat({
 ```typescript
 const response = await continum.llm.anthropic.sonnet_4_6.chat({
   messages: [{ role: 'user', content: 'Summarize briefly.' }],
-  maxTokens: 1000  // Limit response length
+  maxTokens: 1000,  // Limit response length
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -232,7 +242,8 @@ const response = await continum.llm.anthropic.sonnet_4_6.chat({
 ```typescript
 const response = await continum.llm.anthropic.haiku_4_5.chat({
   messages: [{ role: 'user', content: 'List 5 items.' }],
-  stop_sequences: ['\n\n', 'END']
+  stop_sequences: ['\n\n', 'END'],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -242,7 +253,8 @@ Track token consumption:
 
 ```typescript
 const response = await continum.llm.anthropic.opus_4_6.chat({
-  messages: [{ role: 'user', content: 'Hello!' }]
+  messages: [{ role: 'user', content: 'Hello!' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 console.log('Input tokens:', response.promptTokens);
@@ -255,7 +267,8 @@ console.log('Total tokens:', response.promptTokens + response.outputTokens);
 ```typescript
 try {
   const response = await continum.llm.anthropic.opus_4_6.chat({
-    messages: [{ role: 'user', content: 'Hello' }]
+    messages: [{ role: 'user', content: 'Hello' }],
+    sandbox: 'your-sandbox-slug'
   });
 } catch (error) {
   if (error.message.includes('rate_limit')) {
@@ -305,7 +318,8 @@ const response = await continum.llm.anthropic.sonnet_4_6.chat({
 - Security vulnerabilities
 - Performance issues
 - Best practices
-- Code clarity`
+- Code clarity`,
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -316,7 +330,8 @@ const response = await continum.llm.anthropic.sonnet_4_6.chat({
 const response = await continum.llm.anthropic.opus_4_6.chat({
   messages: [
     { role: 'user', content: 'Design a scalable architecture for...' }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'
 });
 
 // Review the thinking process
@@ -328,12 +343,14 @@ console.log('Reasoning:', response.thinkingBlock);
 ```typescript
 // Simple task - use Haiku (fast and cheap)
 const simple = await continum.llm.anthropic.haiku_4_5.chat({
-  messages: [{ role: 'user', content: 'Classify this email as spam or not.' }]
+  messages: [{ role: 'user', content: 'Classify this email as spam or not.' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 // Complex task - use Opus (most capable)
 const complex = await continum.llm.anthropic.opus_4_6.chat({
-  messages: [{ role: 'user', content: 'Analyze this legal document...' }]
+  messages: [{ role: 'user', content: 'Analyze this legal document...' }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 

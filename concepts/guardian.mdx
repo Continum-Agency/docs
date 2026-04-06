@@ -175,13 +175,18 @@ const result = await response.json();
 
 ## SDK Integration
 
-Guardian is automatically integrated when enabled:
+Guardian runs automatically when enabled:
 
 ```typescript
+import { Continum } from '@continum/sdk';
+
 const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  guardianEnabled: true
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  guardianConfig: {
+    enabled: true,  // Default: true
+    action: 'REDACT_AND_CONTINUE'  // Default
+  }
 });
 
 // Guardian runs automatically before LLM call
@@ -191,17 +196,19 @@ const response = await continum.llm.openai.gpt_4o.chat({
   ]
 });
 
-// If guardianAction is REDACT_AND_CONTINUE:
-// - Guardian detects SSN
-// - Redacts to "My SSN is [SSN_REDACTED]"
-// - Sends redacted prompt to OpenAI
-// - Returns response to user
+// Behind the scenes:
+// 1. Guardian scans: Detects SSN (< 100ms)
+// 2. Guardian redacts: "My SSN is [REDACTED_SSN]"
+// 3. LLM receives redacted prompt
+// 4. User gets response
 
 // If guardianAction is BLOCK_ON_DETECT:
 // - Guardian detects SSN
 // - Throws error: "PII detected, request blocked"
 // - No LLM call made
 ```
+
+See [SDK Guardian Documentation](/sdk/guardian) for complete details.
 
 ## Performance
 

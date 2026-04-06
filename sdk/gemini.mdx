@@ -25,14 +25,14 @@ const continum = new Continum({
   continumKey: process.env.CONTINUM_KEY,
   apiKeys: {
     gemini: process.env.GEMINI_API_KEY
-  },
-  defaultSandbox: 'your-sandbox-slug'
+  }
 });
 
 const response = await continum.llm.gemini.gemini_2_5_pro.chat({
   messages: [
     { role: 'user', content: 'What is the capital of France?' }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
 });
 
 console.log(response.content);
@@ -57,7 +57,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
         }
       }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -72,7 +73,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
       { type: 'image_url', image_url: { url: 'https://example.com/image1.jpg' } },
       { type: 'image_url', image_url: { url: 'https://example.com/image2.jpg' } }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -91,7 +93,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
         }
       }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -110,7 +113,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
         }
       }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -145,7 +149,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
         }
       }
     }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -162,7 +167,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
     {
       type: 'code_execution'
     }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -175,7 +181,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
   messages: [{ role: 'user', content: 'Be creative!' }],
   temperature: 0.9,  // 0.0 to 2.0
   top_p: 0.95,
-  top_k: 40
+  top_k: 40,
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -184,7 +191,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
 ```typescript
 const response = await continum.llm.gemini.gemini_2_5_flash.chat({
   messages: [{ role: 'user', content: 'Summarize briefly.' }],
-  maxTokens: 500
+  maxTokens: 500,
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -202,7 +210,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
       category: 'HARM_CATEGORY_HATE_SPEECH',
       threshold: 'BLOCK_MEDIUM_AND_ABOVE'
     }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -215,7 +224,8 @@ const stream = await continum.llm.gemini.gemini_2_5_flash.chat({
   messages: [
     { role: 'user', content: 'Write a long story.' }
   ],
-  stream: true
+  stream: true,
+  sandbox: 'your-sandbox-slug'
 });
 
 for await (const chunk of stream) {
@@ -229,7 +239,8 @@ Track token consumption:
 
 ```typescript
 const response = await continum.llm.gemini.gemini_2_5_pro.chat({
-  messages: [{ role: 'user', content: 'Hello!' }]
+  messages: [{ role: 'user', content: 'Hello!' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 console.log('Input tokens:', response.promptTokens);
@@ -242,7 +253,8 @@ console.log('Total tokens:', response.promptTokens + response.outputTokens);
 ```typescript
 try {
   const response = await continum.llm.gemini.gemini_2_5_pro.chat({
-    messages: [{ role: 'user', content: 'Hello' }]
+    messages: [{ role: 'user', content: 'Hello' }],
+    sandbox: 'your-sandbox-slug'
   });
 } catch (error) {
   if (error.message.includes('quota')) {
@@ -292,7 +304,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
       { type: 'image_url', image_url: { url: 'https://example.com/product.jpg' } },
       { type: 'text', text: 'Focus on design, usability, and market appeal.' }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -301,12 +314,14 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
 ```typescript
 // For simple tasks, use Flash (faster and cheaper)
 const quick = await continum.llm.gemini.gemini_2_5_flash.chat({
-  messages: [{ role: 'user', content: 'Classify this text as positive or negative.' }]
+  messages: [{ role: 'user', content: 'Classify this text as positive or negative.' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 // For complex tasks, use Pro
 const detailed = await continum.llm.gemini.gemini_2_5_pro.chat({
-  messages: [{ role: 'user', content: 'Analyze this video and create a detailed report.' }]
+  messages: [{ role: 'user', content: 'Analyze this video and create a detailed report.' }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -320,7 +335,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
       category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
       threshold: 'BLOCK_ONLY_HIGH'  // More permissive
     }
-  ]
+  ],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -336,7 +352,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
       { type: 'text', text: 'Extract all text from this image and format it as markdown.' },
       { type: 'image_url', image_url: { url: 'https://example.com/document.jpg' } }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -350,7 +367,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
       { type: 'text', text: 'Create a 3-paragraph summary of this video.' },
       { type: 'video_url', video_url: { url: 'https://example.com/lecture.mp4' } }
     ]
-  }]
+  }],
+  sandbox: 'your-sandbox-slug'
 });
 ```
 
@@ -361,7 +379,8 @@ const response = await continum.llm.gemini.gemini_2_5_pro.chat({
   messages: [
     { role: 'user', content: 'Write and execute Python code to calculate prime numbers up to 100.' }
   ],
-  tools: [{ type: 'code_execution' }]
+  tools: [{ type: 'code_execution' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 console.log('Code:', response.raw.code);

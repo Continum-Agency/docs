@@ -1,0 +1,568 @@
+---
+title: "Mirror (Post-LLM Auditing)"
+description: "Asynchronous compliance auditing without blocking user responses"
+---
+
+## Overview
+
+Mirror is Continum's **post-LLM auditing layer** that runs **after** your LLM responds. It captures the complete interaction (prompt + response) and validates it against compliance rules in the background.
+
+<Info>
+**Key Characteristics:**
+- Runs **asynchronously** (fire-and-forget)
+- Adds **0ms user-facing latency**
+- Never blocks the user
+- Audit happens in background (2-5 seconds)
+</Info>
+
+## How It Works
+
+```
+LLM Responds
+    ↓
+User Gets Response Immediately ✅
+    ↓
+Mirror Fires (async, no wait)
+    ↓
+POST /audit/ingest
+    ↓
+Queue to SQS
+    ↓
+Lambda Processes (2-5s)
+    ↓
+Signal Stored in Database
+    ↓
+Visible in Dashboard
+```
+
+## Automatic Integration
+
+Mirror runs automatically when enabled:
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  detonationConfig: {
+    enabled: true  // Default: true
+  }
+});
+
+// Mirror runs automatically after LLM call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [
+    { role: 'user', content: 'What is the capital of France?' }
+  ],
+  sandbox: 'general_audit'
+});
+
+// Timeline:
+// 0ms    - LLM call starts
+// 1500ms - LLM responds
+// 1500ms - User gets response ✅
+// 1501ms - Mirror fires (async)
+// 1502ms - Audit queued
+// 3500ms - Lambda processes
+// 4000ms - Signal stored
+// 4000ms - Visible in dashboard
+```
+
+## Configuration
+
+### Enable/Disable Mirror
+
+<CodeGroup>
+
+```typescript Enabled (Default)
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  detonationConfig: {
+    enabled: true  // Default
+  }
+});
+
+// Mirror runs for all calls
+```
+
+```typescript Disabled
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  detonationConfig: {
+    enabled: false  // Disable Mirror
+  }
+});
+
+// No auditing, no compliance trail
+```
+
+</CodeGroup>
+
+### Per-Call Override
+
+```typescript
+// Skip Mirror for specific call
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Test data' }],
+  skipDetonation: true  // Skip Mirror for this call only
+});
+```
+
+### Strict Mode
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  strictMirror: true  // Throw error if audit fails
+});
+
+// NOT RECOMMENDED: Blocks user if audit fails
+// Default (false) never blocks users
+```
+
+<Warning>
+**Strict Mode Not Recommended**
+
+Setting `strictMirror: true` will throw an error if the audit fails, blocking the user from receiving their response. This defeats the purpose of async auditing. Only use in special compliance scenarios.
+</Warning>
+
+## What Gets Audited
+
+Mirror analyzes the complete LLM interaction:
+
+### Compliance Triplet
+
+```typescript
+{
+  sandboxSlug: 'pii_detection',
+  provider: 'openai',
+  model: 'gpt-4o',
+  systemPrompt: 'You are a helpful assistant',
+  userInput: 'What is the capital of France?',
+  modelOutput: 'The capital of France is Paris.',
+  thinkingBlock?: 'Reasoning trace...',  // For o1, o3, Claude Opus
+  promptTokens: 10,
+  outputTokens: 8
+}
+```
+
+### Analysis Performed
+
+**Prompt Analysis:**
+- PII in user input
+- Prompt injection attempts
+- Jailbreak patterns
+- Adversarial inputs
+
+**Response Analysis:**
+- PII leakage in output
+- Biased or discriminatory content
+- Hallucinations
+- Security vulnerabilities in code
+- Dangerous instructions
+
+**Metadata Analysis:**
+- Token usage patterns
+- Thinking block analysis
+- Model behavior anomalies
+
+## Sandbox Types
+
+Mirror uses sandbox configuration to determine what to check:
+
+<CodeGroup>
+
+```typescript PII Detection
+await continum.sandboxes.create({
+  slug: 'pii_audit',
+  name: 'PII Detection Audit',
+  sandboxType: 'PII_DETECTION',
+  regulations: ['GDPR', 'CCPA', 'HIPAA'],
+  alertThreshold: 'HIGH'
+});
+
+// Checks for PII in both prompt and response
+```
+
+```typescript Security Audit
+await continum.sandboxes.create({
+  slug: 'security_audit',
+  name: 'Security Vulnerability Audit',
+  sandboxType: 'SECURITY_AUDIT',
+  regulations: ['OWASP'],
+  alertThreshold: 'MEDIUM'
+});
+
+// Checks for security vulnerabilities in code
+```
+
+```typescript Full Spectrum
+await continum.sandboxes.create({
+  slug: 'full_audit',
+  name: 'Comprehensive Audit',
+  sandboxType: 'FULL_SPECTRUM',
+  regulations: ['GDPR', 'EU_AI_ACT', 'CCPA'],
+  alertThreshold: 'MEDIUM'
+});
+
+// Checks everything: PII, bias, security, hallucinations
+```
+
+</CodeGroup>
+
+See [Sandbox Types](/concepts/sandbox#sandbox-types) for all 15 types.
+
+## Runtime Metadata
+
+Enrich audits with runtime context:
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: userInput }],
+  sandbox: 'customer_support',
+  metadata: {
+    userId: 'user_123',
+    sessionId: 'sess_abc',
+    applicationContext: 'support_chat',
+    userRole: 'customer',
+    ipAddress: req.ip,
+    tags: ['support', 'billing'],
+    customFields: {
+      ticketId: 'ticket_456',
+      priority: 'high'
+    }
+  }
+});
+
+// Metadata included in audit for filtering and analysis
+```
+
+## Audit Results (Signals)
+
+Mirror produces "signals" that appear in your dashboard:
+
+```typescript
+interface Signal {
+  auditId: string;
+  customerId: string;
+  sandboxSlug: string;
+  provider: string;
+  model: string;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  violations: string[];
+  piiDetected: boolean;
+  reasoning: string;
+  regulation: string[];
+  region: string;
+  durationMs: number;
+  createdAt: Date;
+}
+```
+
+### Example Signal
+
+```json
+{
+  "auditId": "aud_abc123",
+  "customerId": "cust_xyz",
+  "sandboxSlug": "pii_detection",
+  "provider": "openai",
+  "model": "gpt-4o",
+  "riskLevel": "HIGH",
+  "violations": ["PII_LEAK", "EMAIL"],
+  "piiDetected": true,
+  "reasoning": "Email j****@example.com detected in response",
+  "regulation": ["GDPR", "CCPA"],
+  "region": "EU",
+  "durationMs": 3200,
+  "createdAt": "2024-01-15T10:30:00Z"
+}
+```
+
+## Manual Auditing
+
+You can manually trigger audits:
+
+```typescript
+// Manual audit (not recommended - use automatic integration)
+continum.shadowAudit('pii_detection', {
+  provider: 'openai',
+  model: 'gpt-4o',
+  systemPrompt: 'You are a helpful assistant',
+  userInput: 'What is the capital of France?',
+  modelOutput: 'The capital of France is Paris.',
+  promptTokens: 10,
+  outputTokens: 8
+});
+
+// Fire-and-forget, no return value
+```
+
+<Warning>
+Manual auditing is rarely needed. The SDK automatically audits all LLM calls when Mirror is enabled.
+</Warning>
+
+## Performance
+
+Mirror is designed for high throughput with zero user impact:
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| **User-facing latency** | **0ms** | Fully asynchronous |
+| Ingestion latency | < 50ms | API ingestion |
+| Processing time | 2-5s | Compliance analysis |
+| Throughput | 1000+ req/s | Auto-scaling |
+
+## Error Handling
+
+Mirror includes robust error handling:
+
+### Automatic Retries
+
+```typescript
+// Mirror automatically retries failed audits
+// - 3 retry attempts
+// - Exponential backoff
+// - Failed audits tracked in database
+```
+
+### Fail-Safe Design
+
+```typescript
+// If Mirror fails, user is NEVER blocked
+try {
+  mirror.fire(sandbox, params, result);
+} catch (error) {
+  // Error logged, user unaffected
+  console.warn('[Continum Mirror] Audit failed:', error);
+}
+```
+
+### Validation
+
+```typescript
+// Mirror validates before ingestion:
+// - Sandbox must exist
+// - Sandbox must be active
+// - API key must be valid
+// - Plan limits enforced
+```
+
+## Use Cases
+
+### Customer Support Audit
+
+```typescript
+app.post('/api/support/chat', async (req, res) => {
+  const { message, userId } = req.body;
+  
+  const response = await continum.llm.openai.gpt_4o.chat({
+    messages: [
+      { role: 'system', content: 'You are a support agent' },
+      { role: 'user', content: message }
+    ],
+    sandbox: 'support_audit',
+    metadata: {
+      userId,
+      applicationContext: 'support_chat',
+      tags: ['support']
+    }
+  });
+  
+  // User gets response immediately
+  res.json({ reply: response.content });
+  
+  // Mirror audits in background:
+  // - Check for PII leakage
+  // - Check for policy violations
+  // - Store signal in database
+  // - Alert if high-risk
+});
+```
+
+### Code Generation Audit
+
+```typescript
+async function generateCode(prompt: string) {
+  const response = await continum.llm.openai.gpt_4o.chat({
+    messages: [
+      { role: 'system', content: 'You are a code generator' },
+      { role: 'user', content: prompt }
+    ],
+    sandbox: 'code_security_audit',
+    metadata: {
+      applicationContext: 'code_generation',
+      tags: ['code', 'security']
+    }
+  });
+  
+  // User gets code immediately
+  // Mirror checks for:
+  // - SQL injection vulnerabilities
+  // - XSS vulnerabilities
+  // - Hardcoded secrets
+  // - Insecure patterns
+  
+  return response.content;
+}
+```
+
+### Compliance Reporting
+
+```typescript
+// All audits are stored and queryable
+// View in dashboard:
+// - Filter by risk level
+// - Filter by sandbox
+// - Filter by date range
+// - Export for compliance reports
+
+// Example: Generate monthly compliance report
+// 1. Go to Dashboard → Signals
+// 2. Filter: Last 30 days, All sandboxes
+// 3. Export as CSV/JSON
+// 4. Submit to compliance team
+```
+
+## Best Practices
+
+### When to Enable Mirror
+
+✅ **Enable Mirror when:**
+- Need audit trail for compliance
+- Want to detect violations in LLM output
+- Need to monitor LLM behavior
+- Production environment
+
+❌ **Skip Mirror when:**
+- Running automated tests (high volume)
+- Local development
+- Non-production environments
+- Cost optimization needed
+
+### Sandbox Selection
+
+Choose appropriate sandbox for your use case:
+
+```typescript
+// Customer support → PII_DETECTION
+sandbox: 'support_pii_audit'
+
+// Code generation → SECURITY_AUDIT
+sandbox: 'code_security_audit'
+
+// Content moderation → CONTENT_POLICY
+sandbox: 'content_moderation'
+
+// General use → FULL_SPECTRUM
+sandbox: 'general_audit'
+```
+
+### Metadata Enrichment
+
+Always include relevant metadata:
+
+```typescript
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: prompt }],
+  metadata: {
+    userId: getCurrentUser().id,
+    sessionId: getSession().id,
+    applicationContext: 'feature_name',
+    environment: process.env.NODE_ENV,
+    customFields: {
+      // Add any relevant context
+    }
+  }
+});
+```
+
+### Monitoring
+
+Monitor audit health in dashboard:
+
+- **Signal volume**: Track audit volume over time
+- **Risk distribution**: Monitor HIGH/CRITICAL signals
+- **Violation types**: Identify common violations
+- **Processing time**: Ensure audits complete quickly
+
+## Limitations
+
+### Processing Delay
+
+Audits take 2-5 seconds to process:
+
+```
+User gets response: 0ms ✅
+Audit completes: 2-5s
+Signal visible: 2-5s
+```
+
+This is acceptable for compliance but not real-time blocking.
+
+### No Real-Time Blocking
+
+Mirror cannot block LLM responses:
+
+```
+❌ Cannot do: Block response if violation detected
+✅ Can do: Alert after response sent
+```
+
+For real-time blocking, use Guardian (pre-LLM).
+
+### Storage Limits
+
+Audits are stored based on plan:
+
+| Plan | Audit Retention |
+|------|----------------|
+| DEV | 30 days |
+| PRO | 90 days |
+| PRO_MAX | 1 year |
+| ENTERPRISE | Custom |
+
+## Defense in Depth
+
+Combine Guardian and Mirror for complete protection:
+
+```typescript
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+  guardianConfig: {
+    enabled: true,  // Pre-LLM protection
+    action: 'REDACT_AND_CONTINUE'
+  },
+  detonationConfig: {
+    enabled: true  // Post-LLM auditing
+  }
+});
+
+// Complete protection:
+// 1. Guardian blocks/redacts PII in input
+// 2. LLM processes clean input
+// 3. Mirror audits output for violations
+// 4. Full compliance coverage
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Guardian" icon="shield" href="/sdk/guardian">
+    Learn about pre-LLM protection
+  </Card>
+  <Card title="Sandbox Management" icon="cube" href="/sdk/sandboxes">
+    Configure sandboxes programmatically
+  </Card>
+  <Card title="Configuration" icon="gear" href="/sdk/configuration">
+    Advanced SDK configuration
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/endpoint/audit-ingest">
+    Mirror API documentation
+  </Card>
+</CardGroup>

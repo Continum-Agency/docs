@@ -44,25 +44,27 @@ const continum = new Continum({
     openai: process.env.OPENAI_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,
     gemini: process.env.GEMINI_API_KEY
-  },
-  defaultSandbox: 'your-sandbox-slug'
+  }
 });
 
 // OpenAI
 const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
 });
 
 // Anthropic - use model family names
 const response2 = await continum.llm.anthropic.opus_4_6.chat({
-  messages: [{ role: 'user', content: 'Review code' }]
+  messages: [{ role: 'user', content: 'Review code' }],
+  sandbox: 'your-sandbox-slug'
 });
 // Supported: opus_4_6, sonnet_4_6, sonnet_4, haiku_4_5, haiku_3_5, sonnet_3_7
 // Legacy: claude_3_5_sonnet also works (v0.0.4+)
 
 // Gemini
 const response3 = await continum.llm.gemini.gemini_2_5_pro.chat({
-  messages: [{ role: 'user', content: 'Summarize' }]
+  messages: [{ role: 'user', content: 'Summarize' }],
+  sandbox: 'your-sandbox-slug'
 });
 
 // ✅ User gets response instantly

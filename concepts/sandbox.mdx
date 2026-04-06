@@ -131,6 +131,38 @@ Define your own rules and detection logic.
 
 ## Creating a Sandbox
 
+### Via SDK (Programmatic)
+
+Create sandboxes in your application code:
+
+```typescript
+import { Continum } from '@continum/sdk';
+
+const continum = new Continum({
+  continumKey: process.env.CONTINUM_KEY!,
+  apiKeys: { openai: process.env.OPENAI_API_KEY }
+});
+
+// Create sandbox
+const sandbox = await continum.sandboxes.create({
+  slug: 'my_sandbox',
+  name: 'My Sandbox',
+  sandboxType: 'PII_DETECTION',
+  guardianAction: 'REDACT_AND_CONTINUE',
+  alertThreshold: 'HIGH',
+  region: 'EU',
+  regulations: ['GDPR', 'EU_AI_ACT']
+});
+
+// Use sandbox
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Hello' }],
+  sandbox: 'my_sandbox'
+});
+```
+
+See [SDK Sandbox Documentation](/sdk/sandboxes) for complete details.
+
 ### Via Dashboard
 
 1. Navigate to Sandboxes in the dashboard
@@ -279,16 +311,10 @@ const continum = new Continum({
   openaiKey: process.env.OPENAI_API_KEY
 });
 
-// Use default sandbox
-const response1 = await continum.llm.openai.gpt_4o.chat({
+// Use sandbox
+const response = await continum.llm.openai.gpt_4o.chat({
   messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'sandbox-one'  // Specify sandbox
-});
-
-// Override sandbox for specific call
-const response2 = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Generate code' }],
-  sandbox: 'sandbox-two'  // Different sandbox
+  sandbox: 'my_sandbox'
 });
 ```
 
@@ -335,13 +361,22 @@ Create sandboxes for different use cases:
 
 ```typescript
 // Customer support
-defaultSandbox: 'support-sandbox'
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Help me' }],
+  sandbox: 'support-sandbox'
+});
 
 // Code generation
-defaultSandbox: 'code-sandbox'
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Write code' }],
+  sandbox: 'code-sandbox'
+});
 
 // Content moderation
-defaultSandbox: 'content-sandbox'
+const response = await continum.llm.openai.gpt_4o.chat({
+  messages: [{ role: 'user', content: 'Review content' }],
+  sandbox: 'content-sandbox'
+});
 ```
 
 ### Testing
