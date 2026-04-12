@@ -1,0 +1,360 @@
+---
+title: "Presets & Compliance"
+description: "Automatic detection configuration with presets and compliance frameworks"
+---
+
+## Overview
+
+Presets automatically configure the right detection types for your use case. Instead of manually selecting sandbox types, specify a preset and Continum will enable the appropriate checks.
+
+## Available Presets
+
+### customer-support
+
+For customer support bots, help desks, and Q&A systems.
+
+```typescript
+{ preset: 'customer-support' }
+```
+
+**Automatically enables:**
+- PII Detection
+- Content Policy
+- Bias Detection
+- Hallucination Detection
+
+**Best for:** Chat support, help desk automation, FAQ bots
+
+---
+
+### legal-ai
+
+For legal research, document analysis, and compliance tools.
+
+```typescript
+{ preset: 'legal-ai' }
+```
+
+**Automatically enables:**
+- PII Detection
+- Legal Compliance
+- Hallucination Detection
+- Bias Detection
+- Citation Verification
+
+**Best for:** Legal research, contract analysis, compliance tools
+
+---
+
+### fintech-ai
+
+For financial services, trading, and investment advice.
+
+```typescript
+{ preset: 'fintech-ai' }
+```
+
+**Automatically enables:**
+- PII Detection
+- Financial Compliance
+- Security Audit
+- Bias Detection
+- Hallucination Detection
+
+**Best for:** Trading bots, financial advisors, investment analysis
+
+---
+
+### healthcare-ai
+
+For medical advice, diagnosis, and healthcare applications.
+
+```typescript
+{ preset: 'healthcare-ai' }
+```
+
+**Automatically enables:**
+- PII Detection (including health data)
+- Content Policy
+- Bias Detection
+- Hallucination Detection
+- Medical Compliance
+
+**Best for:** Medical chatbots, diagnosis tools, health records
+
+---
+
+### coding-assistant
+
+For code generation, review, and development tools.
+
+```typescript
+{ preset: 'coding-assistant' }
+```
+
+**Automatically enables:**
+- Security Audit
+- Supply Chain Integrity
+- Prompt Injection
+- Secret Leak Detection
+
+**Best for:** Code generation, code review, IDE assistants
+
+---
+
+### agent
+
+For AI agents with tool use and autonomous actions.
+
+```typescript
+{ preset: 'agent' }
+```
+
+**Automatically enables:**
+- Agent Safety
+- Prompt Injection
+- Data Exfiltration
+- Security Audit
+- Scope Creep Detection
+
+**Best for:** Autonomous agents, tool-using AI, multi-step workflows
+
+---
+
+### content-generation
+
+For writing, marketing, and creative content.
+
+```typescript
+{ preset: 'content-generation' }
+```
+
+**Automatically enables:**
+- Content Policy
+- Bias Detection
+- Hallucination Detection
+- Copyright Compliance
+
+**Best for:** Content writing, marketing copy, creative tools
+
+---
+
+### internal-tool
+
+For internal team productivity and automation.
+
+```typescript
+{ preset: 'internal-tool' }
+```
+
+**Automatically enables:**
+- PII Detection
+- Security Audit
+- Data Exfiltration
+
+**Best for:** Internal chatbots, productivity tools, automation
+
+---
+
+### data-pipeline
+
+For ETL, data processing, and analysis.
+
+```typescript
+{ preset: 'data-pipeline' }
+```
+
+**Automatically enables:**
+- PII Detection
+- Data Exfiltration
+- Security Audit
+
+**Best for:** Data processing, ETL pipelines, analytics
+
+---
+
+### education-ai
+
+For tutoring, learning, and training applications.
+
+```typescript
+{ preset: 'education-ai' }
+```
+
+**Automatically enables:**
+- Content Policy
+- Bias Detection
+- Hallucination Detection
+- Age-Appropriate Content
+
+**Best for:** Tutoring bots, learning platforms, training tools
+
+## Compliance Frameworks
+
+Specify compliance frameworks to automatically enable required checks:
+
+```typescript
+{
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2', 'HIPAA']
+}
+```
+
+### Supported Frameworks
+
+| Framework | Description | Automatically Enables |
+|-----------|-------------|----------------------|
+| `GDPR` | EU data protection | PII detection, data minimization, consent tracking |
+| `CCPA` | California privacy | PII detection, data rights, opt-out mechanisms |
+| `HIPAA` | US healthcare data | Health data detection, access controls, audit logs |
+| `SOC2` | Security & availability | Security audit, access controls, monitoring |
+| `ISO_27001` | Information security | Security audit, risk management, incident response |
+| `EU_AI_ACT` | EU AI regulation | Bias detection, transparency, human oversight |
+| `FINRA` | US financial services | Financial compliance, record keeping, supervision |
+| `PCI_DSS` | Payment card security | Security audit, encryption, access controls |
+| `NIST_AI_RMF` | AI risk management | Risk assessment, bias detection, transparency |
+| `FCA` | UK financial conduct | Financial compliance, consumer protection |
+| `PDPA` | Singapore data protection | PII detection, consent, data rights |
+| `PIPEDA` | Canada privacy | PII detection, consent, accountability |
+| `UK_DPA_2018` | UK data protection | PII detection, data rights, lawful basis |
+
+## Combining Presets and Frameworks
+
+Presets and frameworks work together to provide comprehensive coverage:
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'fintech-ai',           // Base detection types
+  comply: ['FINRA', 'SOC2']       // Additional compliance checks
+});
+```
+
+This configuration will enable:
+- All checks from `fintech-ai` preset
+- Additional checks required by FINRA and SOC2
+
+## Custom Detection Types
+
+For advanced use cases, you can specify detection types directly:
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  sandbox: {
+    types: [
+      'PII_DETECTION',
+      'SECURITY_AUDIT',
+      'PROMPT_INJECTION',
+      'CUSTOM'
+    ],
+    customRules: ['CUSTOM_RULE_1', 'CUSTOM_RULE_2']
+  }
+});
+```
+
+**Available detection types:**
+- `PII_DETECTION` - Personal information
+- `BIAS_DETECTION` - Discrimination and bias
+- `SECURITY_AUDIT` - Code injection, vulnerabilities
+- `PROMPT_INJECTION` - Jailbreaks, goal hijacking
+- `DATA_EXFILTRATION` - Data leaks, cross-user leaks
+- `AGENT_SAFETY` - Irreversible actions, scope creep
+- `HALLUCINATION_DETECTION` - False information
+- `CONTENT_POLICY` - Harmful content
+- `FINANCIAL_COMPLIANCE` - Financial regulations
+- `LEGAL_COMPLIANCE` - Legal requirements
+- `MULTI_TURN_ATTACK` - Multi-step attacks
+- `SUPPLY_CHAIN_INTEGRITY` - Dependency security
+- `FULL_SPECTRUM` - All detection types
+- `CUSTOM` - Custom rules
+
+## Environment-Specific Configuration
+
+Use different presets for different environments:
+
+```typescript
+import { continum } from '@continum/sdk';
+
+const preset = process.env.NODE_ENV === 'production'
+  ? 'customer-support'
+  : 'internal-tool';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset,
+  environment: process.env.NODE_ENV as 'production' | 'staging' | 'development'
+});
+```
+
+## Best Practices
+
+### 1. Start with a Preset
+
+Always start with a preset that matches your use case:
+
+```typescript
+// ✅ Good
+{ preset: 'customer-support', comply: ['GDPR'] }
+
+// ❌ Avoid (unless you have specific requirements)
+{ sandbox: { types: ['PII_DETECTION', 'BIAS_DETECTION', ...] } }
+```
+
+### 2. Add Compliance Frameworks
+
+Specify all applicable frameworks:
+
+```typescript
+{
+  preset: 'healthcare-ai',
+  comply: ['HIPAA', 'GDPR', 'SOC2']
+}
+```
+
+### 3. Use Environment Variables
+
+Keep configuration flexible:
+
+```typescript
+const frameworks = process.env.COMPLIANCE_FRAMEWORKS?.split(',') || [];
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: frameworks as ComplianceFramework[]
+});
+```
+
+### 4. Test in Development
+
+Use local mode to test without consuming quota:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  local: true  // Runs audits locally, no API calls
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Alerts" icon="bell" href="/sdk/alerts">
+    Set up real-time alerts for violations
+  </Card>
+  <Card title="Blocking Mode" icon="hand" href="/sdk/blocking-mode">
+    Use blocking mode for high-risk scenarios
+  </Card>
+  <Card title="Violation Handlers" icon="code" href="/sdk/violation-handlers">
+    React to specific violations in code
+  </Card>
+  <Card title="Local Development" icon="laptop" href="/sdk/local-mode">
+    Test compliance without API calls
+  </Card>
+</CardGroup>

@@ -8,16 +8,19 @@ description: "Authenticate your API requests with Continum"
 Continum uses API keys to authenticate requests. Include your API key in the `x-continum-key` header:
 
 ```bash
-curl https://api.continum.co/customers \
+curl https://api.continum.co/audits \
   -H "x-continum-key: co_your_api_key_here"
 ```
 
 ## Getting Your API Key
 
-1. Sign in to the [dashboard](https://app.continum.co)
-2. Navigate to Settings → API Keys
-3. Click "Generate New Key"
-4. Copy and save the key securely
+Get your API key from the [dashboard](https://app.continum.co):
+
+1. Sign in with GitHub
+2. Create a customer account (Individual or Company)
+3. Navigate to Settings → API Keys
+4. Click "Generate New Key"
+5. Copy and save the key securely
 
 <Warning>
   API keys are displayed only once. If you lose your key, you'll need to generate a new one.
@@ -141,7 +144,7 @@ Plan limit reached:
 Test your API key with a simple request:
 
 ```bash
-curl https://api.continum.co/customers \
+curl https://api.continum.co/audits \
   -H "x-continum-key: co_your_api_key_here"
 ```
 
@@ -149,10 +152,10 @@ Expected response:
 
 ```json
 {
-  "id": "cust_123",
-  "name": "Your Company",
-  "plan": "PRO",
-  "auditCount": 1234
+  "audits": [],
+  "total": 0,
+  "page": 1,
+  "limit": 10
 }
 ```
 
@@ -161,17 +164,22 @@ Expected response:
 The SDK handles authentication automatically:
 
 ```typescript
-import { Continum } from '@continum/sdk';
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
 
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY
-});
+const openai = new OpenAI();
 
-// SDK includes x-continum-key header automatically
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
-});
+// SDK includes authentication automatically
+const response = await protect(
+  () => openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: 'Hello' }]
+  }),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support'
+  }
+);
 ```
 
 ## Internal API Authentication
@@ -198,8 +206,8 @@ curl -X POST https://api.continum.co/internal/signal \
   <Card title="SDK Installation" icon="download" href="/sdk/installation">
     Install the SDK
   </Card>
-  <Card title="Customer API" icon="user" href="/api-reference/customer/create">
-    Manage customer accounts
+  <Card title="Audits API" icon="search" href="/api-reference/audits/list">
+    Query compliance audits
   </Card>
   <Card title="Dashboard" icon="gauge" href="/dashboard/overview">
     View your API keys

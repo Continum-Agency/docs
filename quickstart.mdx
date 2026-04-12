@@ -3,23 +3,37 @@ title: "Quickstart"
 description: "Get started with Continum in 5 minutes"
 ---
 
-## Get your API key
+## Interactive Setup (Recommended)
 
-Sign up at [app.continum.co](https://app.continum.co) and create your first API key.
+The fastest way to get started is with our interactive CLI:
 
-<Steps>
-  <Step title="Sign in with GitHub">
-    Navigate to the app and authenticate with your GitHub account.
-  </Step>
-  <Step title="Create a customer account">
-    Choose your account type (Individual or Company) and plan (DEV, PRO, PRO_MAX, or ENTERPRISE).
-  </Step>
-  <Step title="Generate API key">
-    Your API key will be displayed once. Save it securely - you won't be able to see it again.
-  </Step>
-</Steps>
+```bash
+npx continum init
+```
 
-## Install the SDK
+This will:
+- Detect your existing framework (Next.js, Fastify, etc.) or help you set one up
+- Guide you through configuration (product type, providers, compliance frameworks)
+- Install the SDK automatically
+- Generate config files and example code
+- Set up real-time alerts (Slack, PagerDuty, Discord, Webhooks)
+
+<Note>
+  **Starting from scratch?** Run `npx continum init` in an empty folder and it will help you set up a complete project with your chosen framework and Continum built-in!
+</Note>
+
+## Manual Setup
+
+### 1. Get your API key
+
+Get your API key from the [dashboard](https://app.continum.co):
+
+1. Sign in with GitHub
+2. Create a customer account (Individual or Company)
+3. Generate an API key
+4. Save it securely (you won't see it again)
+
+### 2. Install the SDK
 
 <CodeGroup>
 
@@ -37,91 +51,180 @@ pnpm add @continum/sdk
 
 </CodeGroup>
 
-## Create your first sandbox
+### 3. Basic usage
 
-Sandboxes define what compliance checks to run. Create one in the dashboard or via API:
-
-```typescript
-// In the app dashboard:
-// 1. Navigate to Sandboxes
-// 2. Click "Create Sandbox"
-// 3. Choose a type (e.g., PII_DETECTION)
-// 4. Set a slug (e.g., "my-sandbox")
-```
-
-## Basic usage
-
-Replace your existing LLM calls with Continum:
+Wrap any LLM call with `protect()`:
 
 <CodeGroup>
 
 ```typescript OpenAI
-import { Continum } from '@continum/sdk';
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
 
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY
-});
+const openai = new OpenAI();
 
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [
-    { role: 'system', content: 'You are a helpful assistant.' },
-    { role: 'user', content: 'What is the capital of France?' }
-  ],
-  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
-});
+const response = await protect(
+  () => openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: 'What is the capital of France?' }
+    ]
+  }),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support',
+    comply: ['GDPR', 'SOC2']
+  }
+);
 
-console.log(response.content);
+console.log(response.choices[0].message.content);
 ```
 
 ```typescript Anthropic
-import { Continum } from '@continum/sdk';
+import { protect } from '@continum/sdk';
+import Anthropic from '@anthropic-ai/sdk';
 
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  anthropicKey: process.env.ANTHROPIC_API_KEY
-});
+const anthropic = new Anthropic();
 
-// Use model family names (recommended)
-const response = await continum.llm.claude.opus_4_6.chat({
-  messages: [
-    { role: 'user', content: 'What is the capital of France?' }
-  ],
-  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
-});
-// Supported: opus_4_6, sonnet_4_6, sonnet_4, haiku_4_5, haiku_3_5, sonnet_3_7
-// Legacy: claude_3_5_sonnet also works (v0.0.4+)
+const response = await protect(
+  () => anthropic.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 1024,
+    messages: [
+      { role: 'user', content: 'What is the capital of France?' }
+    ]
+  }),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support',
+    comply: ['GDPR', 'SOC2']
+  }
+);
 
-console.log(response.content);
+console.log(response.content[0].text);
 ```
 
-```typescript Gemini
-import { Continum } from '@continum/sdk';
+```typescript Google Gemini
+import { protect } from '@continum/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  geminiKey: process.env.GEMINI_API_KEY
-});
+const genai = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+const model = genai.getGenerativeModel({ model: 'gemini-2.5-pro' });
 
-const response = await continum.llm.gemini.gemini_2_5_pro.chat({
-  messages: [
-    { role: 'user', content: 'What is the capital of France?' }
-  ],
-  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
-});
-// Supported: gemini_2_5_pro, gemini_2_5_flash, gemini_2_0_flash, gemini_1_5_pro
+const response = await protect(
+  () => model.generateContent('What is the capital of France?'),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support',
+    comply: ['GDPR', 'SOC2']
+  }
+);
 
-console.log(response.content);
+console.log(response.response.text());
 ```
 
 </CodeGroup>
 
+### 4. Global configuration (recommended)
+
+For production, configure once and use everywhere:
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2'],
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY
+  }
+});
+
+// Now use protect() without passing config every time
+const response = await continum.protect(
+  () => openai.chat.completions.create({...})
+);
+```
+
 ## What happens next?
 
 1. **Instant response**: Your user gets the LLM response immediately (0ms added latency)
-2. **Guardian check**: If enabled, PII is detected and redacted pre-LLM (< 100ms)
-3. **Async audit**: The interaction is mirrored to your sandbox for compliance checking
+2. **Async audit**: The interaction is audited for compliance violations
+3. **Real-time alerts**: Violations trigger alerts to your configured channels
 4. **Signal stored**: Results appear in your dashboard within seconds
+
+## Presets & Compliance Frameworks
+
+Continum uses **presets** to automatically configure the right detection types for your use case:
+
+```typescript
+// Customer support bot
+{ preset: 'customer-support' }  // → PII, content policy, bias
+
+// Financial services
+{ preset: 'fintech-ai', comply: ['FINRA', 'SOC2'] }  // → PII, financial compliance, security
+
+// Healthcare application
+{ preset: 'healthcare-ai', comply: ['HIPAA'] }  // → PII, content policy, bias, hallucination
+
+// AI agent with tool use
+{ preset: 'agent' }  // → Agent safety, prompt injection, data exfiltration
+```
+
+**Available presets:**
+- `customer-support`, `legal-ai`, `fintech-ai`, `healthcare-ai`
+- `coding-assistant`, `agent`, `content-generation`
+- `internal-tool`, `data-pipeline`, `education-ai`
+
+**Supported compliance frameworks:**
+- `GDPR`, `CCPA`, `HIPAA`, `SOC2`, `ISO_27001`
+- `EU_AI_ACT`, `FINRA`, `PCI_DSS`, `NIST_AI_RMF`
+
+## Real-time Alerts
+
+Get notified instantly when violations are detected:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,      // HIGH/CRITICAL violations
+    pagerduty: process.env.PAGERDUTY_KEY,      // CRITICAL violations only
+    discord: process.env.DISCORD_WEBHOOK_URL,  // MEDIUM/LOW violations
+    webhook: process.env.CUSTOM_WEBHOOK_URL    // All violations
+  }
+});
+```
+
+Alerts are automatically routed by risk level without any dashboard configuration needed.
+
+## Blocking Mode
+
+For high-risk scenarios, use blocking mode to wait for audit results:
+
+```typescript
+import { protect, ContinumBlockedError } from '@continum/sdk';
+
+try {
+  const response = await protect(
+    () => openai.chat.completions.create({...}),
+    {
+      apiKey: process.env.CONTINUM_API_KEY!,
+      blockOn: 'HIGH'  // Block if risk level is HIGH or CRITICAL
+    }
+  );
+} catch (error) {
+  if (error instanceof ContinumBlockedError) {
+    console.log('Blocked:', error.signal.violations);
+    console.log('Risk level:', error.signal.riskLevel);
+    // Handle blocked request
+  }
+}
+```
 
 ## View your signals
 
@@ -129,7 +232,7 @@ Navigate to your [dashboard](https://app.continum.co/dashboard) to see complianc
 
 - Risk level breakdown (LOW, MEDIUM, HIGH, CRITICAL)
 - Violation types and reasoning
-- Filter by sandbox, provider, model, date range
+- Filter by provider, model, date range
 - Export for compliance reports
 
 ## Next steps
@@ -140,12 +243,12 @@ Navigate to your [dashboard](https://app.continum.co/dashboard) to see complianc
   Learn about advanced SDK configuration options
 </Card>
 
-<Card title="Sandbox types" icon="cube" href="/concepts/sandbox">
-  Explore 15+ compliance sandbox types
+<Card title="Interactive CLI" icon="terminal" href="/cli/continum-init">
+  Use npx continum init for guided setup
 </Card>
 
-<Card title="Guardian protection" icon="shield" href="/concepts/guardian">
-  Enable pre-LLM PII detection and redaction
+<Card title="Presets & Compliance" icon="shield-check" href="/sdk/presets">
+  Explore presets and compliance frameworks
 </Card>
 
 <Card title="API reference" icon="code" href="/api-reference/introduction">
@@ -155,5 +258,5 @@ Navigate to your [dashboard](https://app.continum.co/dashboard) to see complianc
 </CardGroup>
 
 <Note>
-  **Dev plan limits**: The DEV plan includes 1 sandbox and 1,000 audits. Upgrade to PRO for unlimited audits and more sandboxes.
+  **Dev plan limits**: The DEV plan includes 1,000 audits per month. Upgrade to PRO for unlimited audits and advanced features.
 </Note>

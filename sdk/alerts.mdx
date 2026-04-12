@@ -1,0 +1,387 @@
+---
+title: "Real-time Alerts"
+description: "Get notified instantly when compliance violations are detected"
+---
+
+## Overview
+
+Continum can send real-time alerts to Slack, PagerDuty, Discord, or custom webhooks when compliance violations are detected. Alerts are automatically routed by risk level without any dashboard configuration.
+
+## Quick Setup
+
+Configure alerts in your SDK:
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY,
+    discord: process.env.DISCORD_WEBHOOK_URL,
+    webhook: process.env.CUSTOM_WEBHOOK_URL
+  }
+});
+```
+
+## Alert Channels
+
+### Slack
+
+Receive team notifications for HIGH and CRITICAL violations.
+
+**Setup:**
+
+1. Create a Slack webhook:
+   - Go to https://api.slack.com/apps
+   - Create a new app or select existing
+   - Enable "Incoming Webhooks"
+   - Add webhook to workspace
+   - Copy webhook URL
+
+2. Add to your configuration:
+
+```typescript
+{
+  alerts: {
+    slack: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
+  }
+}
+```
+
+**Alert format:**
+
+```
+🚨 CRITICAL Violation Detected
+
+Audit ID: aud_abc123
+Risk Level: CRITICAL
+Violations: PII_LEAK, CREDENTIAL_LEAK
+Provider: OpenAI
+Model: gpt-4
+
+Reasoning: User input contained email address and API key
+
+View in Dashboard: https://app.continum.co/audits/aud_abc123
+```
+
+**Routing:**
+- CRITICAL violations → Immediate alert
+- HIGH violations → Immediate alert
+- MEDIUM/LOW violations → Not sent to Slack
+
+---
+
+### PagerDuty
+
+Trigger incidents for CRITICAL violations only.
+
+**Setup:**
+
+1. Create a PagerDuty integration:
+   - Go to Services → Select service
+   - Integrations → Add integration
+   - Integration type: "Events API v2"
+   - Copy integration key
+
+2. Add to your configuration:
+
+```typescript
+{
+  alerts: {
+    pagerduty: 'R0123456789ABCDEF'
+  }
+}
+```
+
+**Incident format:**
+
+```
+Title: Continum CRITICAL Violation
+Description: PII_LEAK, CREDENTIAL_LEAK detected in gpt-4 call
+Severity: critical
+Custom Details:
+  - Audit ID: aud_abc123
+  - Provider: OpenAI
+  - Model: gpt-4
+  - Violations: PII_LEAK, CREDENTIAL_LEAK
+```
+
+**Routing:**
+- CRITICAL violations → Incident created
+- HIGH/MEDIUM/LOW violations → Not sent to PagerDuty
+
+---
+
+### Discord
+
+Receive community alerts for MEDIUM and LOW violations.
+
+**Setup:**
+
+1. Create a Discord webhook:
+   - Go to Server Settings → Integrations
+   - Create webhook
+   - Copy webhook URL
+
+2. Add to your configuration:
+
+```typescript
+{
+  alerts: {
+    discord: 'https://discord.com/api/webhooks/YOUR/WEBHOOK'
+  }
+}
+```
+
+**Alert format:**
+
+```
+⚠️ MEDIUM Violation Detected
+
+Audit ID: aud_abc123
+Risk Level: MEDIUM
+Violations: BIAS_DETECTION
+Provider: OpenAI
+Model: gpt-4
+
+Reasoning: Response contained gender bias
+
+View in Dashboard: https://app.continum.co/audits/aud_abc123
+```
+
+**Routing:**
+- MEDIUM violations → Alert sent
+- LOW violations → Alert sent
+- HIGH/CRITICAL violations → Not sent to Discord (use Slack/PagerDuty)
+
+---
+
+### Custom Webhook
+
+Send all violations to your own endpoint.
+
+**Setup:**
+
+```typescript
+{
+  alerts: {
+    webhook: 'https://your-app.com/continum-alerts'
+  }
+}
+```
+
+**Payload format:**
+
+```json
+{
+  "auditId": "aud_abc123",
+  "riskLevel": "HIGH",
+  "violations": ["PII_LEAK", "CREDENTIAL_LEAK"],
+  "reasoning": "User input contained email address and API key",
+  "provider": "OpenAI",
+  "model": "gpt-4",
+  "timestamp": "2026-04-12T10:30:00Z",
+  "dashboardUrl": "https://app.continum.co/audits/aud_abc123",
+  "sessionId": "session_123",
+  "userId": "user_456",
+  "metadata": {
+    "feature": "chat",
+    "environment": "production"
+  }
+}
+```
+
+**Routing:**
+- ALL violations → Sent to webhook (regardless of risk level)
+
+## Alert Routing Summary
+
+| Risk Level | Slack | PagerDuty | Discord | Webhook |
+|------------|-------|-----------|---------|---------|
+| CRITICAL   | ✅    | ✅        | ❌      | ✅      |
+| HIGH       | ✅    | ❌        | ❌      | ✅      |
+| MEDIUM     | ❌    | ❌        | ✅      | ✅      |
+| LOW        | ❌    | ❌        | ✅      | ✅      |
+
+## Environment Variables
+
+Store webhook URLs in environment variables:
+
+```bash
+# .env
+CONTINUM_API_KEY=co_your_api_key_here
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+PAGERDUTY_KEY=R0123456789ABCDEF
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR/WEBHOOK
+CUSTOM_WEBHOOK_URL=https://your-app.com/continum-alerts
+```
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY,
+    discord: process.env.DISCORD_WEBHOOK_URL,
+    webhook: process.env.CUSTOM_WEBHOOK_URL
+  }
+});
+```
+
+## Interactive Setup
+
+Use the CLI to set up alerts interactively:
+
+```bash
+npx continum init
+```
+
+The CLI will:
+- Ask which alert channels you want to configure
+- Validate webhook URLs (HTTPS required)
+- Store them in `.env`
+- Generate configuration files
+
+## Custom Alert Handling
+
+For advanced use cases, handle alerts in your code:
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  onRiskLevel: {
+    CRITICAL: async (signal) => {
+      // Send to your own alerting system
+      await sendToOpsGenie(signal);
+      await notifySecurityTeam(signal);
+    },
+    HIGH: async (signal) => {
+      await logToSIEM(signal);
+    }
+  }
+});
+```
+
+## Alert Filtering
+
+Filter alerts by violation type:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  onViolation: {
+    PII_LEAK: async (signal) => {
+      await sendAlert('PII detected', signal);
+    },
+    PROMPT_INJECTION: async (signal) => {
+      await logSecurityIncident(signal);
+    }
+  }
+});
+```
+
+## Testing Alerts
+
+Test your alert configuration:
+
+```typescript
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+// This should trigger a PII_LEAK alert
+const response = await protect(
+  () => openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [{
+      role: 'user',
+      content: 'My email is john@example.com and my SSN is 123-45-6789'
+    }]
+  }),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support',
+    alerts: {
+      slack: process.env.SLACK_WEBHOOK_URL
+    }
+  }
+);
+```
+
+## Security Best Practices
+
+### 1. Use HTTPS Only
+
+All webhook URLs must use HTTPS:
+
+```typescript
+// ✅ Good
+{ slack: 'https://hooks.slack.com/services/...' }
+
+// ❌ Bad (will be rejected)
+{ slack: 'http://hooks.slack.com/services/...' }
+```
+
+### 2. Store Webhooks in Environment Variables
+
+Never commit webhook URLs to version control:
+
+```typescript
+// ✅ Good
+{ slack: process.env.SLACK_WEBHOOK_URL }
+
+// ❌ Bad
+{ slack: 'https://hooks.slack.com/services/T00/B00/XXX' }
+```
+
+### 3. Rotate Webhooks Regularly
+
+Rotate webhook URLs periodically and update your `.env` file.
+
+### 4. Limit Webhook Permissions
+
+Use webhooks with minimal permissions (e.g., post-only for Slack).
+
+## Troubleshooting
+
+### Alerts Not Received
+
+1. **Check webhook URL**: Ensure it's correct and uses HTTPS
+2. **Verify risk level**: Check if violations match routing rules
+3. **Test webhook**: Send a test request to verify it works
+4. **Check logs**: Look for errors in your application logs
+
+### Duplicate Alerts
+
+If you're receiving duplicate alerts:
+- Ensure you're not configuring alerts in multiple places
+- Check if you have multiple SDK instances
+
+### Alert Delays
+
+Alerts are sent asynchronously and typically arrive within 1-2 seconds of violation detection.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Blocking Mode" icon="hand" href="/sdk/blocking-mode">
+    Block requests based on violations
+  </Card>
+  <Card title="Violation Handlers" icon="code" href="/sdk/violation-handlers">
+    React to violations in code
+  </Card>
+  <Card title="Dashboard" icon="gauge" href="/dashboard/overview">
+    View all violations in the dashboard
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/alerts">
+    Manage alerts via API
+  </Card>
+</CardGroup>

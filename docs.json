@@ -28,21 +28,15 @@
             "pages": [
               "sdk/installation",
               "sdk/configuration",
-              "sdk/sandboxes",
-              "sdk/guardian",
-              "sdk/mirror"
-              
+              "sdk/presets",
+              "sdk/alerts",
+              "sdk/blocking-mode"
             ]
           },
           {
             "group": "CLI",
             "pages": [
-              "cli/overview",
-              "cli/installation",
-              "cli/authentication",
-              "cli/commands",
-              "cli/configuration",
-              "cli/team-deployment"
+              "cli/continum-init"
             ]
           },
           {
@@ -50,9 +44,6 @@
             "pages": [
               "concepts/architecture",
               "concepts/zero-latency",
-              "concepts/guardian",
-              "concepts/mirror",
-              "concepts/sandbox",
               "concepts/signal",
               "concepts/evidence",
               "concepts/incidents"

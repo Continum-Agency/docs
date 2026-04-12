@@ -27,49 +27,62 @@ Modern AI applications face critical challenges:
 
 ## The Solution
 
-Continum provides zero-latency compliance auditing through asynchronous processing:
+Continum provides zero-latency compliance auditing with a single function: `protect()`. Wrap any LLM call and get automatic compliance monitoring without changing your code structure.
 
-1. **SDK intercepts** your LLM calls (OpenAI, Claude, Gemini)
-2. **Returns response instantly** to your users (0ms added latency)
-3. **Mirrors the interaction** asynchronously to isolated sandboxes
-4. **Validates compliance** using Claude as the judge
-5. **Stores signals** in your dashboard for monitoring and alerts
+**One line to secure every LLM call:**
 
 ```typescript
-import { Continum } from '@continum/sdk';
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
 
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  apiKeys: {
-    openai: process.env.OPENAI_API_KEY,
-    anthropic: process.env.ANTHROPIC_API_KEY,
-    gemini: process.env.GEMINI_API_KEY
+const openai = new OpenAI();
+
+// Wrap your LLM call with protect()
+const response = await protect(
+  () => openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: 'Hello!' }]
+  }),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support',
+    comply: ['GDPR', 'SOC2']
+  }
+);
+
+// ✅ User gets response instantly (0ms added latency)
+// ✅ Compliance audit runs in background
+// ✅ Violations appear in dashboard with real-time alerts
+```
+
+**How it works:**
+
+1. **Intercepts** your LLM call transparently
+2. **Returns response instantly** to your users (zero latency)
+3. **Audits asynchronously** in isolated sandboxes
+4. **Validates compliance** using Claude as the judge
+5. **Sends alerts** to Slack, PagerDuty, Discord, or webhooks
+6. **Stores signals** in your dashboard for monitoring
+
+**Global configuration (recommended):**
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2'],
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY
   }
 });
 
-// OpenAI
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'your-sandbox-slug'  // Specify sandbox for auditing
-});
-
-// Anthropic - use model family names
-const response2 = await continum.llm.anthropic.opus_4_6.chat({
-  messages: [{ role: 'user', content: 'Review code' }],
-  sandbox: 'your-sandbox-slug'
-});
-// Supported: opus_4_6, sonnet_4_6, sonnet_4, haiku_4_5, haiku_3_5, sonnet_3_7
-// Legacy: claude_3_5_sonnet also works (v0.0.4+)
-
-// Gemini
-const response3 = await continum.llm.gemini.gemini_2_5_pro.chat({
-  messages: [{ role: 'user', content: 'Summarize' }],
-  sandbox: 'your-sandbox-slug'
-});
-
-// ✅ User gets response instantly
-// ✅ Compliance audit runs in background
-// ✅ Violations appear in dashboard
+// Now use protect() without passing config every time
+const response = await continum.protect(
+  () => openai.chat.completions.create({...})
+);
 ```
 
 ## Key Features
@@ -83,18 +96,18 @@ const response3 = await continum.llm.gemini.gemini_2_5_pro.chat({
     Users get responses instantly while compliance runs asynchronously
   </Card>
   <Card
-    title="Guardian Protection"
-    icon="shield"
-    href="/concepts/guardian"
+    title="Presets & Compliance"
+    icon="shield-check"
+    href="/sdk/presets"
   >
-    Pre-LLM PII detection and redaction in under 100ms
+    Automatic detection configuration with presets and compliance frameworks
   </Card>
   <Card
-    title="15+ Sandbox Types"
-    icon="cube"
-    href="/concepts/sandbox"
+    title="Real-time Alerts"
+    icon="bell"
+    href="/sdk/alerts"
   >
-    PII, bias, security, prompt injection, agent safety, and more
+    Get notified instantly when violations are detected
   </Card>
   <Card
     title="Audit-Ready Evidence"

@@ -31,16 +31,24 @@ User Request → LLM Call (500ms) → Response ⚡
 The SDK calls your LLM provider directly using your API keys:
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY  // Stays on your server
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY  // Stays on your server
 });
 
 // This calls OpenAI directly, no proxy
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'your-sandbox-slug'
-});
+const response = await protect(
+  () => openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: 'Hello' }]
+  }),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support'
+  }
+);
 // Response in ~500ms, same as direct OpenAI call
 ```
 
@@ -197,8 +205,8 @@ console.log(response.content); // User sees response immediately
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="Guardian" icon="shield" href="/concepts/guardian">
-    Learn about pre-LLM PII protection
+  <Card title="Presets" icon="shield-check" href="/sdk/presets">
+    Learn about automatic detection configuration
   </Card>
   <Card title="Evidence" icon="file-certificate" href="/concepts/evidence">
     Transform monitoring into audit-ready evidence
@@ -207,6 +215,6 @@ console.log(response.content); // User sees response immediately
     Explore the full system architecture
   </Card>
   <Card title="SDK Configuration" icon="gear" href="/sdk/configuration">
-    Configure Guardian and monitoring settings
+    Configure presets and compliance settings
   </Card>
 </CardGroup>

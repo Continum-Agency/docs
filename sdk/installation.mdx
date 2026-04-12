@@ -3,11 +3,30 @@ title: "Installation"
 description: "Install and set up the Continum SDK"
 ---
 
-## Installation
+## Interactive Setup (Recommended)
+
+The fastest way to get started:
+
+```bash
+npx continum init
+```
+
+This interactive CLI will:
+- Detect your existing framework or help you set one up
+- Install the SDK automatically
+- Generate configuration files
+- Set up real-time alerts
+- Create example code
+
+<Note>
+  **Starting from scratch?** Run `npx continum init` in an empty folder to set up a complete project with your chosen framework and Continum built-in!
+</Note>
+
+## Manual Installation
 
 Install the Continum SDK using your preferred package manager:
 
-**Current Version**: 0.5.1
+**Current Version**: 0.6.0
 
 <CodeGroup>
 
@@ -29,12 +48,14 @@ pnpm add @continum/sdk
 
 - Node.js 18+ or Bun 1.0+
 - TypeScript 5.0+ (recommended)
-- At least one LLM provider API key (OpenAI, Anthropic, or Gemini)
+- Your LLM provider SDK (OpenAI, Anthropic, Google, etc.)
 
 ## Get Your API Key
 
-1. Sign up at [app.continum.co](https://app.continum.co)
-2. Create a customer account
+Get your API key from the [dashboard](https://app.continum.co):
+
+1. Sign in with GitHub
+2. Create a customer account (Individual or Company)
 3. Generate an API key
 4. Save it securely (you won't see it again)
 
@@ -44,33 +65,59 @@ Create a `.env` file in your project root:
 
 ```bash
 # Continum API key (required)
-CONTINUM_KEY=co_your_api_key_here
+CONTINUM_API_KEY=co_your_api_key_here
 
-# LLM Provider keys (at least one required)
-OPENAI_API_KEY=sk-your_openai_key
-ANTHROPIC_API_KEY=sk-ant-your_anthropic_key
-GEMINI_API_KEY=your_gemini_key
+# Optional: Alert webhooks
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+PAGERDUTY_KEY=YOUR_PAGERDUTY_INTEGRATION_KEY
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR/WEBHOOK
 ```
 
 ## Basic Setup
 
 ```typescript
-import { Continum } from '@continum/sdk';
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
 
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY
+const openai = new OpenAI();
+
+// Wrap your LLM call with protect()
+const response = await protect(
+  () => openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: 'Hello, world!' }]
+  }),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support',
+    comply: ['GDPR', 'SOC2']
+  }
+);
+
+console.log(response.choices[0].message.content);
+```
+
+## Global Configuration (Recommended)
+
+For production, configure once and use everywhere:
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2'],
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY
+  }
 });
 
-// Make your first call - specify sandbox per call
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [
-    { role: 'user', content: 'Hello, world!' }
-  ],
-  sandbox: 'your-sandbox-slug'  // Sandbox is required for auditing
-});
-
-console.log(response.content);
+// Now use protect() without passing config every time
+const response = await continum.protect(
+  () => openai.chat.completions.create({...})
+);
 ```
 
 ## TypeScript Support
@@ -78,20 +125,32 @@ console.log(response.content);
 The SDK is written in TypeScript and includes full type definitions:
 
 ```typescript
-import { Continum, ChatResult, ContinumConfig } from '@continum/sdk';
+import { protect, ContinumBlockedError } from '@continum/sdk';
+import type { 
+  ContinumConfig, 
+  RiskLevel, 
+  ViolationCode,
+  AuditSignal 
+} from '@continum/sdk';
 
 const config: ContinumConfig = {
-  continumKey: process.env.CONTINUM_KEY!,
-  openaiKey: process.env.OPENAI_API_KEY,
-  guardianEnabled: true
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2']
 };
 
-const continum = new Continum(config);
-
-const response: ChatResult = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'your-sandbox-slug'  // Specify sandbox for this call
-});
+try {
+  const response = await protect(
+    () => openai.chat.completions.create({...}),
+    config
+  );
+} catch (error) {
+  if (error instanceof ContinumBlockedError) {
+    const signal: AuditSignal = error.signal;
+    console.log('Risk:', signal.riskLevel);
+    console.log('Violations:', signal.violations);
+  }
+}
 ```
 
 ## Verify Installation
@@ -99,22 +158,26 @@ const response: ChatResult = await continum.llm.openai.gpt_4o.chat({
 Test your setup with this simple script:
 
 ```typescript
-import { Continum } from '@continum/sdk';
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
 
 async function test() {
-  const continum = new Continum({
-    continumKey: process.env.CONTINUM_KEY,
-    openaiKey: process.env.OPENAI_API_KEY
-  });
-
   try {
-    const response = await continum.llm.openai.gpt_4o.chat({
-      messages: [{ role: 'user', content: 'Say hello' }],
-      sandbox: 'your-sandbox-slug'  // Specify sandbox
-    });
+    const response = await protect(
+      () => openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: 'Say hello' }]
+      }),
+      {
+        apiKey: process.env.CONTINUM_API_KEY!,
+        preset: 'customer-support'
+      }
+    );
     
     console.log('✅ SDK working!');
-    console.log('Response:', response.content);
+    console.log('Response:', response.choices[0].message.content);
   } catch (error) {
     console.error('❌ Error:', error.message);
   }
@@ -136,10 +199,10 @@ node test.js
 ### Missing API Key
 
 ```
-Error: Missing continumKey in configuration
+Error: Missing apiKey in configuration
 ```
 
-**Solution**: Ensure `CONTINUM_KEY` is set in your environment variables.
+**Solution**: Ensure `CONTINUM_API_KEY` is set in your environment variables.
 
 ### Invalid API Key
 
@@ -149,27 +212,20 @@ Error: Invalid API key
 
 **Solution**: Verify your API key in the [dashboard](https://app.continum.co/dashboard).
 
-### Sandbox Not Found
+### Provider SDK Not Installed
 
 ```
-Error: Sandbox "my-sandbox" not found
+Error: Cannot find module 'openai'
 ```
 
-**Solution**: Create the sandbox in the dashboard first, or use an existing sandbox slug.
+**Solution**: Install the provider SDK:
 
-### Provider Key Missing
-
-```
-Error: OpenAI API key required for this call
-```
-
-**Solution**: Ensure the provider's API key is configured:
-
-```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY  // Add this
-});
+```bash
+npm install openai
+# or
+npm install @anthropic-ai/sdk
+# or
+npm install @google/generative-ai
 ```
 
 ## Next Steps
@@ -178,13 +234,13 @@ const continum = new Continum({
   <Card title="Configuration" icon="gear" href="/sdk/configuration">
     Learn about SDK configuration options
   </Card>
-  <Card title="OpenAI Integration" icon="/images/openai.svg" href="/sdk/openai">
-    Use OpenAI models with Continum
+  <Card title="Presets" icon="shield-check" href="/sdk/presets">
+    Explore presets and compliance frameworks
   </Card>
-  <Card title="Anthropic Integration" icon="https://cdn.simpleicons.org/anthropic" href="/sdk/anthropic">
-    Use Claude models with Continum
+  <Card title="Blocking Mode" icon="hand" href="/sdk/blocking-mode">
+    Use blocking mode for high-risk scenarios
   </Card>
-  <Card title="Gemini Integration" icon="https://cdn.simpleicons.org/googlegemini" href="/sdk/gemini">
-    Use Gemini models with Continum
+  <Card title="Alerts" icon="bell" href="/sdk/alerts">
+    Set up real-time alerts
   </Card>
 </CardGroup>

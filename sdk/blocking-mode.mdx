@@ -1,0 +1,433 @@
+---
+title: "Blocking Mode"
+description: "Block LLM calls based on compliance violations"
+---
+
+## Overview
+
+By default, `protect()` uses fire-and-forget auditing (zero latency). For high-risk scenarios where safety > speed, use **blocking mode** to wait for audit results before returning the response.
+
+## Quick Start
+
+```typescript
+import { protect, ContinumBlockedError } from '@continum/sdk';
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+try {
+  const response = await protect(
+    () => openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: 'Process this payment' }]
+    }),
+    {
+      apiKey: process.env.CONTINUM_API_KEY!,
+      blockOn: 'HIGH'  // Block if risk level is HIGH or CRITICAL
+    }
+  );
+  
+  // Safe to proceed
+  console.log(response.choices[0].message.content);
+} catch (error) {
+  if (error instanceof ContinumBlockedError) {
+    console.log('Blocked:', error.signal.violations);
+    console.log('Risk level:', error.signal.riskLevel);
+    console.log('Reasoning:', error.signal.reasoning);
+    // Handle blocked request
+  }
+}
+```
+
+## Risk Level Thresholds
+
+Specify the minimum risk level that should block the request:
+
+```typescript
+// Block only CRITICAL violations
+{ blockOn: 'CRITICAL' }
+
+// Block HIGH and CRITICAL violations
+{ blockOn: 'HIGH' }
+
+// Block MEDIUM, HIGH, and CRITICAL violations
+{ blockOn: 'MEDIUM' }
+
+// Block all violations (including LOW)
+{ blockOn: 'LOW' }
+```
+
+**Risk level hierarchy:**
+```
+LOW < MEDIUM < HIGH < CRITICAL
+```
+
+If `blockOn: 'HIGH'`, then HIGH and CRITICAL violations will block, but MEDIUM and LOW will not.
+
+## Global Configuration
+
+Configure blocking mode globally:
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'fintech-ai',
+  blockOn: 'HIGH'  // All calls will block on HIGH/CRITICAL
+});
+
+// This call will block if HIGH or CRITICAL violations detected
+const response = await continum.protect(
+  () => openai.chat.completions.create({...})
+);
+```
+
+## Per-Call Override
+
+Override global configuration for specific calls:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  blockOn: 'HIGH'  // Global default
+});
+
+// Override for this specific call
+const response = await continum.protect(
+  () => openai.chat.completions.create({...}),
+  { blockOn: 'CRITICAL' }  // Only block CRITICAL for this call
+);
+```
+
+## Error Handling
+
+### ContinumBlockedError
+
+When a request is blocked, `ContinumBlockedError` is thrown:
+
+```typescript
+import { protect, ContinumBlockedError } from '@continum/sdk';
+
+try {
+  const response = await protect(
+    () => openai.chat.completions.create({...}),
+    { apiKey: '...', blockOn: 'HIGH' }
+  );
+} catch (error) {
+  if (error instanceof ContinumBlockedError) {
+    // Access the audit signal
+    const signal = error.signal;
+    
+    console.log('Audit ID:', signal.auditId);
+    console.log('Risk Level:', signal.riskLevel);
+    console.log('Violations:', signal.violations);
+    console.log('Reasoning:', signal.reasoning);
+    console.log('Provider:', signal.provider);
+    console.log('Model:', signal.model);
+    
+    // Handle based on violation type
+    if (signal.violations.includes('PII_LEAK')) {
+      return 'Sorry, I cannot process requests containing personal information.';
+    }
+    
+    if (signal.violations.includes('PROMPT_INJECTION')) {
+      return 'Invalid request detected.';
+    }
+  }
+  
+  // Re-throw other errors
+  throw error;
+}
+```
+
+### Signal Properties
+
+The `AuditSignal` object contains:
+
+```typescript
+interface AuditSignal {
+  auditId: string;              // Unique audit ID
+  sandboxId: string;            // Sandbox that performed the audit
+  riskLevel: RiskLevel;         // LOW, MEDIUM, HIGH, CRITICAL
+  violations: ViolationCode[];  // Array of violation codes
+  piiDetected: boolean;         // Whether PII was detected
+  reasoning: string;            // Explanation of violations
+  regulation: ComplianceFramework[];  // Applicable regulations
+  provider: string;             // LLM provider (OpenAI, Anthropic, etc.)
+  model: string;                // Model name (gpt-4, claude-3-5-sonnet, etc.)
+  durationMs: number;           // Audit duration in milliseconds
+  timestamp: string;            // ISO 8601 timestamp
+  sandboxTypes: SandboxType[];  // Detection types used
+  sessionId?: string;           // Session ID (if provided)
+  userId?: string;              // User ID (if provided)
+  isBlocked: boolean;           // Whether request was blocked
+}
+```
+
+## Use Cases
+
+### Financial Transactions
+
+Block HIGH/CRITICAL violations for financial operations:
+
+```typescript
+async function processPayment(amount: number, userId: string) {
+  try {
+    const response = await protect(
+      () => openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{
+          role: 'user',
+          content: `Process payment of $${amount} for user ${userId}`
+        }]
+      }),
+      {
+        apiKey: process.env.CONTINUM_API_KEY!,
+        preset: 'fintech-ai',
+        blockOn: 'HIGH',
+        userId,
+        metadata: { operation: 'payment', amount: amount.toString() }
+      }
+    );
+    
+    return response.choices[0].message.content;
+  } catch (error) {
+    if (error instanceof ContinumBlockedError) {
+      // Log security incident
+      await logSecurityIncident({
+        userId,
+        operation: 'payment',
+        violations: error.signal.violations,
+        riskLevel: error.signal.riskLevel
+      });
+      
+      throw new Error('Payment blocked due to security concerns');
+    }
+    throw error;
+  }
+}
+```
+
+### Healthcare Data
+
+Block any violations when handling protected health information:
+
+```typescript
+async function processHealthQuery(query: string, patientId: string) {
+  try {
+    const response = await protect(
+      () => openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: query }]
+      }),
+      {
+        apiKey: process.env.CONTINUM_API_KEY!,
+        preset: 'healthcare-ai',
+        comply: ['HIPAA'],
+        blockOn: 'LOW',  // Block ALL violations
+        userId: patientId
+      }
+    );
+    
+    return response.choices[0].message.content;
+  } catch (error) {
+    if (error instanceof ContinumBlockedError) {
+      return 'I cannot process this request due to privacy concerns.';
+    }
+    throw error;
+  }
+}
+```
+
+### Legal Advice
+
+Block HIGH/CRITICAL violations for legal consultations:
+
+```typescript
+async function provideLegalAdvice(question: string, caseId: string) {
+  try {
+    const response = await protect(
+      () => openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: question }]
+      }),
+      {
+        apiKey: process.env.CONTINUM_API_KEY!,
+        preset: 'legal-ai',
+        blockOn: 'HIGH',
+        metadata: { caseId }
+      }
+    );
+    
+    return response.choices[0].message.content;
+  } catch (error) {
+    if (error instanceof ContinumBlockedError) {
+      // Escalate to human lawyer
+      await escalateToHuman(caseId, error.signal);
+      return 'This request requires human review.';
+    }
+    throw error;
+  }
+}
+```
+
+## Performance Impact
+
+Blocking mode adds latency because it waits for the audit to complete:
+
+| Mode | Latency | Use Case |
+|------|---------|----------|
+| Fire-and-forget (default) | 0ms | Most applications |
+| Blocking mode | 500-2000ms | High-risk operations |
+
+**Typical blocking mode latency:**
+- Simple checks: 500-800ms
+- Complex checks: 1000-1500ms
+- Full spectrum: 1500-2000ms
+
+## Combining with Alerts
+
+Use blocking mode with alerts for comprehensive protection:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'fintech-ai',
+  blockOn: 'HIGH',
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY
+  }
+});
+```
+
+When a request is blocked:
+1. Request is blocked immediately
+2. Alert is sent to configured channels
+3. Signal is stored in dashboard
+4. `ContinumBlockedError` is thrown
+
+## Best Practices
+
+### 1. Use Blocking Mode Selectively
+
+Only use blocking mode for high-risk operations:
+
+```typescript
+// ✅ Good - blocking for financial transactions
+async function processPayment() {
+  return protect(() => llmCall(), { blockOn: 'HIGH' });
+}
+
+// ✅ Good - fire-and-forget for general chat
+async function chat() {
+  return protect(() => llmCall());  // No blockOn
+}
+```
+
+### 2. Handle Errors Gracefully
+
+Always provide user-friendly error messages:
+
+```typescript
+try {
+  const response = await protect(() => llmCall(), { blockOn: 'HIGH' });
+} catch (error) {
+  if (error instanceof ContinumBlockedError) {
+    // ✅ Good - user-friendly message
+    return 'Sorry, I cannot process this request.';
+    
+    // ❌ Bad - exposes internal details
+    // return `Blocked: ${error.signal.violations.join(', ')}`;
+  }
+}
+```
+
+### 3. Log Blocked Requests
+
+Track blocked requests for security monitoring:
+
+```typescript
+try {
+  const response = await protect(() => llmCall(), { blockOn: 'HIGH' });
+} catch (error) {
+  if (error instanceof ContinumBlockedError) {
+    await logSecurityEvent({
+      type: 'blocked_request',
+      auditId: error.signal.auditId,
+      violations: error.signal.violations,
+      riskLevel: error.signal.riskLevel,
+      userId: currentUserId
+    });
+    
+    throw new Error('Request blocked');
+  }
+}
+```
+
+### 4. Use Appropriate Thresholds
+
+Choose the right threshold for your use case:
+
+```typescript
+// Financial transactions - block HIGH and above
+{ preset: 'fintech-ai', blockOn: 'HIGH' }
+
+// Healthcare - block everything
+{ preset: 'healthcare-ai', blockOn: 'LOW' }
+
+// Internal tools - block only CRITICAL
+{ preset: 'internal-tool', blockOn: 'CRITICAL' }
+```
+
+## Testing Blocking Mode
+
+Test your blocking mode configuration:
+
+```typescript
+import { protect, ContinumBlockedError } from '@continum/sdk';
+
+async function testBlocking() {
+  try {
+    // This should trigger PII_LEAK and block
+    const response = await protect(
+      () => openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{
+          role: 'user',
+          content: 'My SSN is 123-45-6789 and email is john@example.com'
+        }]
+      }),
+      {
+        apiKey: process.env.CONTINUM_API_KEY!,
+        blockOn: 'HIGH'
+      }
+    );
+    
+    console.log('❌ Should have been blocked');
+  } catch (error) {
+    if (error instanceof ContinumBlockedError) {
+      console.log('✅ Correctly blocked');
+      console.log('Violations:', error.signal.violations);
+    }
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Violation Handlers" icon="code" href="/sdk/violation-handlers">
+    React to specific violations in code
+  </Card>
+  <Card title="Alerts" icon="bell" href="/sdk/alerts">
+    Set up real-time alerts
+  </Card>
+  <Card title="Local Mode" icon="laptop" href="/sdk/local-mode">
+    Test without API calls
+  </Card>
+  <Card title="Presets" icon="shield-check" href="/sdk/presets">
+    Explore presets and compliance frameworks
+  </Card>
+</CardGroup>

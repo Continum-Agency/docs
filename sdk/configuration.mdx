@@ -5,194 +5,333 @@ description: "Configure the Continum SDK for your use case"
 
 ## SDK Version
 
-**Current Version**: 0.5.1
+**Current Version**: 0.6.0
 
-## Model Naming Convention
+## Configuration Methods
 
-The Continum SDK uses snake_case model names that automatically transform to the correct API format. This provides a consistent, developer-friendly interface across all providers.
+### Global Configuration (Recommended)
 
-### Anthropic (Claude) Models
-
-```typescript
-// Recommended: Use model family names
-continum.llm.anthropic.opus_4_6.chat()      // → claude-opus-4-6
-continum.llm.anthropic.sonnet_4_6.chat()    // → claude-sonnet-4-6
-continum.llm.anthropic.sonnet_4.chat()      // → claude-sonnet-4-5
-continum.llm.anthropic.haiku_4_5.chat()     // → claude-haiku-4-5-20251001
-continum.llm.anthropic.haiku_3_5.chat()     // → claude-haiku-3-5-20241022
-continum.llm.anthropic.sonnet_3_7.chat()    // → claude-sonnet-3-7-20250219
-
-// Legacy format (v0.0.4+)
-continum.llm.anthropic.claude_3_5_sonnet.chat()  // → claude-3-5-sonnet-20241022
-
-// Alias: 'claude' and 'anthropic' are interchangeable
-continum.llm.claude.opus_4_6.chat()  // Same as anthropic.opus_4_6
-```
-
-### OpenAI Models
+Configure once and use everywhere:
 
 ```typescript
-continum.llm.openai.gpt_5.chat()       // → gpt-5
-continum.llm.openai.gpt_4o.chat()      // → gpt-4o
-continum.llm.openai.gpt_4_turbo.chat() // → gpt-4-turbo
-continum.llm.openai.o3.chat()          // → o3
-continum.llm.openai.o3_mini.chat()     // → o3-mini
-continum.llm.openai.o1.chat()          // → o1
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2'],
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY
+  }
+});
+
+// Now use protect() without passing config every time
+const response = await continum.protect(
+  () => openai.chat.completions.create({...})
+);
 ```
 
-### Gemini Models
+### Per-Call Configuration
+
+Pass configuration to each `protect()` call:
 
 ```typescript
-continum.llm.gemini.gemini_2_5_pro.chat()   // → gemini-2.5-pro
-continum.llm.gemini.gemini_2_5_flash.chat() // → gemini-2.5-flash
-continum.llm.gemini.gemini_2_0_flash.chat() // → gemini-2.0-flash
-continum.llm.gemini.gemini_1_5_pro.chat()   // → gemini-1.5-pro
-```
+import { protect } from '@continum/sdk';
 
-<Note>
-  **Why snake_case?** It provides consistent autocomplete, prevents typos, and matches the SDK's design philosophy of being the "Next.js for AI" - a clean, structured interface over raw APIs.
-</Note>
+const response = await protect(
+  () => openai.chat.completions.create({...}),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!,
+    preset: 'customer-support',
+    comply: ['GDPR', 'SOC2']
+  }
+);
+```
 
 ## Configuration Options
 
-The Continum SDK accepts the following configuration options:
-
 ```typescript
-import { Continum } from '@continum/sdk';
-
-const continum = new Continum({
+interface ContinumConfig {
   // Required
-  continumKey: string;
+  apiKey: string;
   
-  // Provider API keys (at least one required)
-  openaiKey?: string;
-  anthropicKey?: string;
-  geminiKey?: string;
+  // Automatic configuration
+  preset?: Preset;
+  comply?: ComplianceFramework[];
   
-  // Or use unified format
-  apiKeys?: {
-    openai?: string;
-    anthropic?: string;
-    gemini?: string;
+  // Manual sandbox configuration
+  sandbox?: {
+    types?: SandboxType[];
+    frameworks?: ComplianceFramework[];
+    customRules?: string[];
+    region?: string;
+    blockOn?: RiskLevel;
   };
   
-  // Guardian configuration
-  guardianConfig?: {
-    enabled?: boolean;
-    action?: 'BLOCK_ON_DETECT' | 'REDACT_AND_CONTINUE' | 'ALLOW_ALL';
-    localOnly?: boolean;
-    customPatterns?: Array<{
-      name: string;
-      pattern: RegExp;
-      riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-    }>;
+  // Custom rules
+  customRules?: string[];
+  
+  // Environment
+  environment?: 'production' | 'staging' | 'development';
+  region?: string;
+  
+  // Local development
+  local?: boolean;
+  
+  // Blocking mode
+  blockOn?: RiskLevel;
+  
+  // Alerts
+  alerts?: {
+    slack?: string;
+    pagerduty?: string;
+    discord?: string;
+    webhook?: string;
   };
   
-  // Detonation configuration
-  detonationConfig?: {
-    enabled?: boolean;
-  };
+  // Violation handlers
+  onViolation?: Partial<Record<ViolationCode, ViolationHandler>>;
+  onRiskLevel?: Partial<Record<RiskLevel, ViolationHandler>>;
   
-  // Strict mode
-  strictMirror?: boolean;
-});
+  // Error handling
+  onError?: (error: Error) => void;
+  
+  // Custom endpoint
+  baseUrl?: string;
+}
 ```
 
 ## Required Configuration
 
-### continumKey
+### apiKey
 
-Your Continum API key from the dashboard.
+Your Continum API key:
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY
-});
+{
+  apiKey: process.env.CONTINUM_API_KEY!
+}
 ```
 
-### Provider API Keys
+Get your API key from the [dashboard](https://app.continum.co).
 
-At least one LLM provider API key is required:
+## Automatic Configuration
+
+### preset
+
+Automatically configure detection types for your use case:
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,      // For OpenAI models
-  anthropicKey: process.env.ANTHROPIC_API_KEY, // For Claude models
-  geminiKey: process.env.GEMINI_API_KEY        // For Gemini models
-});
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support'
+}
 ```
 
-## Optional Configuration
+**Available presets:**
+- `customer-support` - PII, content policy, bias
+- `legal-ai` - PII, legal compliance, hallucination, bias
+- `fintech-ai` - PII, financial compliance, security, bias
+- `healthcare-ai` - PII, content policy, bias, hallucination
+- `coding-assistant` - Security, supply chain, prompt injection
+- `agent` - Agent safety, prompt injection, data exfiltration
+- `content-generation` - Content policy, bias, hallucination
+- `internal-tool` - PII, security audit
+- `data-pipeline` - PII, data exfiltration, security
+- `education-ai` - Content policy, bias, hallucination
 
-### guardianConfig
+[Learn more about presets →](/sdk/presets)
 
-Configure pre-LLM PII protection:
+### comply
+
+Specify compliance frameworks:
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  guardianConfig: {
-    enabled: true,  // Enable Guardian (default: true)
-    action: 'REDACT_AND_CONTINUE'  // Action when PII detected
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2', 'HIPAA']
+}
+```
+
+**Supported frameworks:**
+- `GDPR`, `CCPA`, `HIPAA`, `SOC2`, `ISO_27001`
+- `EU_AI_ACT`, `FINRA`, `PCI_DSS`, `NIST_AI_RMF`
+- `FCA`, `PDPA`, `PIPEDA`, `UK_DPA_2018`
+
+[Learn more about compliance →](/sdk/presets)
+
+## Manual Sandbox Configuration
+
+For advanced use cases, configure sandboxes directly:
+
+```typescript
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  sandbox: {
+    types: ['PII_DETECTION', 'SECURITY_AUDIT', 'PROMPT_INJECTION'],
+    frameworks: ['GDPR', 'SOC2'],
+    customRules: ['CUSTOM_RULE_1'],
+    region: 'eu-west-1',
+    blockOn: 'HIGH'
   }
-});
+}
 ```
 
-**Guardian Actions**:
-- `ALLOW_ALL`: Log detection but don't redact (monitoring mode)
-- `REDACT_AND_CONTINUE`: Redact PII and continue with LLM call (default)
-- `BLOCK_ON_DETECT`: Block LLM call if PII detected
+**Available detection types:**
+- `PII_DETECTION`, `BIAS_DETECTION`, `SECURITY_AUDIT`
+- `PROMPT_INJECTION`, `DATA_EXFILTRATION`, `AGENT_SAFETY`
+- `HALLUCINATION_DETECTION`, `CONTENT_POLICY`
+- `FINANCIAL_COMPLIANCE`, `LEGAL_COMPLIANCE`
+- `MULTI_TURN_ATTACK`, `SUPPLY_CHAIN_INTEGRITY`
+- `FULL_SPECTRUM`, `CUSTOM`
 
-### detonationConfig
+## Environment Configuration
 
-Configure post-LLM shadow auditing:
+### environment
+
+Specify the environment:
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  detonationConfig: {
-    enabled: true  // Enable shadow auditing (default: true)
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  environment: 'production'  // 'production' | 'staging' | 'development'
+}
+```
+
+### region
+
+Specify the region for data residency:
+
+```typescript
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  region: 'eu-west-1'  // EU data residency
+}
+```
+
+### local
+
+Enable local mode for development (no API calls, no quota used):
+
+```typescript
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  local: true  // Runs audits locally
+}
+```
+
+[Learn more about local mode →](/sdk/local-mode)
+
+## Blocking Mode
+
+Wait for audit results before returning response:
+
+```typescript
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  blockOn: 'HIGH'  // Block if risk level is HIGH or CRITICAL
+}
+```
+
+**Risk levels:**
+- `LOW` - Block all violations
+- `MEDIUM` - Block MEDIUM, HIGH, CRITICAL
+- `HIGH` - Block HIGH, CRITICAL
+- `CRITICAL` - Block only CRITICAL
+
+[Learn more about blocking mode →](/sdk/blocking-mode)
+
+## Alerts
+
+Configure real-time alerts:
+
+```typescript
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,      // HIGH/CRITICAL
+    pagerduty: process.env.PAGERDUTY_KEY,      // CRITICAL only
+    discord: process.env.DISCORD_WEBHOOK_URL,  // MEDIUM/LOW
+    webhook: process.env.CUSTOM_WEBHOOK_URL    // All violations
   }
-});
+}
 ```
 
-### endpoint
+[Learn more about alerts →](/sdk/alerts)
 
-Custom Continum API endpoint (for self-hosted deployments):
+## Violation Handlers
+
+React to specific violations in code:
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  endpoint: 'https://your-continum-instance.com'
-});
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  onViolation: {
+    PII_LEAK: async (signal) => {
+      await sendAlert('PII detected', signal);
+    },
+    PROMPT_INJECTION: async (signal) => {
+      await logSecurityIncident(signal);
+    }
+  },
+  onRiskLevel: {
+    CRITICAL: async (signal) => {
+      await notifySecurityTeam(signal);
+    }
+  }
+}
 ```
 
-### timeout
+[Learn more about violation handlers →](/sdk/violation-handlers)
 
-Request timeout in milliseconds:
+## Error Handling
+
+Handle audit errors:
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000  // 30 seconds
-});
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  onError: (error) => {
+    console.error('Audit error:', error);
+    // Never throws — audit failures don't break your app
+  }
+}
 ```
 
-### retries
+## Custom Endpoint
 
-Number of retry attempts for failed requests:
+For self-hosted deployments:
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  retries: 3  // Retry up to 3 times
+{
+  apiKey: process.env.CONTINUM_API_KEY!,
+  baseUrl: 'https://your-continum-instance.com'
+}
+```
+
+## Per-Call Overrides
+
+Override global configuration for specific calls:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  blockOn: 'HIGH'
 });
+
+// Override for this call
+const response = await continum.protect(
+  () => openai.chat.completions.create({...}),
+  {
+    blockOn: 'CRITICAL',  // Only block CRITICAL for this call
+    userId: 'user_123',
+    sessionId: 'session_456',
+    metadata: { feature: 'chat' }
+  }
+);
 ```
 
 ## Environment-Specific Configuration
@@ -200,187 +339,121 @@ const continum = new Continum({
 ### Development
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  guardianConfig: {
-    enabled: false  // Disable for faster iteration
-  }
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  local: true,  // No API calls, no quota used
+  environment: 'development'
 });
+```
 
-// Specify sandbox per call
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'dev-sandbox'
+### Staging
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  environment: 'staging',
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL
+  }
 });
 ```
 
 ### Production
 
 ```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  guardianConfig: {
-    enabled: true,
-    action: 'REDACT_AND_CONTINUE'
-  },
-  detonationConfig: {
-    enabled: true
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2'],
+  environment: 'production',
+  blockOn: 'HIGH',
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY
   }
-});
-
-// Specify sandbox per call
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'prod-sandbox'
-});
-```
-
-## Per-Call Configuration
-
-Specify sandbox and override configuration for individual calls:
-
-```typescript
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY
-});
-
-// Specify sandbox for this call
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'security_audit',  // Required for auditing
-  guardianEnabled: false,     // Disable Guardian for this call
-  metadata: {
-    userId: 'user_123',
-    feature: 'chat'
-  }
-});
-```
-
-<Warning>
-  The `sandbox` parameter is required for Guardian and Mirror to function. Calls without a sandbox will not be audited.
-</Warning>
-
-## Multiple Instances
-
-Create multiple Continum instances for different use cases:
-
-```typescript
-// Instance for customer support (strict PII protection)
-const supportContinum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  guardianConfig: {
-    enabled: true,
-    action: 'REDACT_AND_CONTINUE'
-  }
-});
-
-// Instance for code generation (security focus)
-const codeContinum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY,
-  guardianConfig: {
-    enabled: false
-  }
-});
-
-// Use appropriate instance with explicit sandbox
-const supportResponse = await supportContinum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Help me with my account' }],
-  sandbox: 'support-sandbox'
-});
-
-const codeResponse = await codeContinum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Write a function to sort an array' }],
-  sandbox: 'code-sandbox'
 });
 ```
 
 ## Configuration Best Practices
 
-### Use Environment Variables
+### 1. Use Environment Variables
 
 Never hardcode API keys:
 
 ```typescript
 // ❌ Bad
-const continum = new Continum({
-  continumKey: 'co_abc123...',
-  openaiKey: 'sk-abc123...'
-});
+{ apiKey: 'co_abc123...' }
 
 // ✅ Good
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY
-});
+{ apiKey: process.env.CONTINUM_API_KEY! }
 ```
 
-### Validate Configuration
+### 2. Start with Presets
+
+Use presets instead of manual configuration:
+
+```typescript
+// ✅ Good
+{ preset: 'customer-support', comply: ['GDPR'] }
+
+// ❌ Avoid (unless you have specific requirements)
+{ sandbox: { types: ['PII_DETECTION', 'BIAS_DETECTION', ...] } }
+```
+
+### 3. Validate Configuration
 
 Check configuration at startup:
 
 ```typescript
-function createContinum() {
-  if (!process.env.CONTINUM_KEY) {
-    throw new Error('CONTINUM_KEY environment variable is required');
-  }
-  
-  if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
-    throw new Error('At least one LLM provider API key is required');
-  }
-  
-  return new Continum({
-    continumKey: process.env.CONTINUM_KEY,
-    openaiKey: process.env.OPENAI_API_KEY,
-    anthropicKey: process.env.ANTHROPIC_API_KEY
-  });
+if (!process.env.CONTINUM_API_KEY) {
+  throw new Error('CONTINUM_API_KEY is required');
 }
 
-const continum = createContinum();
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY,
+  preset: 'customer-support'
+});
 ```
 
-### Singleton Pattern
+### 4. Use Global Configuration
 
-Create a single instance and reuse it:
+Configure once, use everywhere:
 
 ```typescript
 // continum.ts
-import { Continum } from '@continum/sdk';
+import { continum } from '@continum/sdk';
 
-export const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY!,
-  openaiKey: process.env.OPENAI_API_KEY,
-  guardianConfig: {
-    enabled: true
-  }
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2']
 });
+
+export { continum };
 
 // app.ts
 import { continum } from './continum';
 
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  sandbox: 'your-sandbox-slug'  // Specify sandbox per call
-});
+const response = await continum.protect(
+  () => openai.chat.completions.create({...})
+);
 ```
 
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="OpenAI Integration" icon="https://cdn.simpleicons.org/openai" href="/sdk/openai">
-    Use OpenAI models with Continum
+  <Card title="Presets" icon="shield-check" href="/sdk/presets">
+    Explore presets and compliance frameworks
   </Card>
-  <Card title="Anthropic Integration" icon="https://cdn.simpleicons.org/anthropic" href="/sdk/anthropic">
-    Use Claude models with Continum
+  <Card title="Alerts" icon="bell" href="/sdk/alerts">
+    Set up real-time alerts
   </Card>
-  <Card title="Streaming" icon="water" href="/sdk/streaming">
-    Stream responses from LLMs
+  <Card title="Blocking Mode" icon="hand" href="/sdk/blocking-mode">
+    Block requests based on violations
   </Card>
-  <Card title="Vision" icon="eye" href="/sdk/vision">
-    Use vision models with images
+  <Card title="Local Mode" icon="laptop" href="/sdk/local-mode">
+    Test without API calls
   </Card>
 </CardGroup>

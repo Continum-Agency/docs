@@ -1,0 +1,398 @@
+---
+title: "continum init"
+description: "Interactive CLI to set up Continum SDK in your project"
+---
+
+## Overview
+
+`continum init` is an interactive CLI that sets up the Continum SDK in your project with zero configuration. It detects your existing framework, guides you through configuration, and generates all necessary files.
+
+## Usage
+
+Run this command in your project directory (or an empty folder):
+
+```bash
+npx continum init
+```
+
+No installation required! The CLI will guide you through the entire setup process.
+
+## Features
+
+### 🔍 Smart Framework Detection
+
+The CLI automatically detects your existing framework:
+
+**Frontend:**
+- Next.js (App Router & Pages Router)
+- Nuxt (Vue)
+- SvelteKit
+- Astro
+- React, Vue, Svelte
+
+**Backend:**
+- NestJS
+- Fastify
+- Hono
+- Express
+
+If no framework is detected, it offers to set one up for you!
+
+### 🚀 Framework Setup
+
+Start from scratch with your favorite framework:
+
+```bash
+mkdir my-ai-app
+cd my-ai-app
+npx continum init
+```
+
+The CLI will:
+1. Ask if you want to set up a framework
+2. Install and configure your chosen framework
+3. Set up Continum with your compliance requirements
+4. Generate example code to get you started
+
+### 🎯 Smart Defaults
+
+The CLI automatically:
+- Detects TypeScript vs JavaScript
+- Suggests appropriate presets based on your product type
+- Configures compliance frameworks
+- Sets up alert channels
+- Installs the SDK
+
+### 🔒 Secure by Default
+
+- API keys and webhooks stored in `.env` (not committed)
+- HTTPS validation for all webhook URLs
+- Environment variable references in config files
+
+## What It Creates
+
+After running `npx continum init`, you'll have:
+
+- ✅ `continum.config.ts` (or `.js`) - Your Continum configuration
+- ✅ `.env` - Updated with API key and alert webhooks
+- ✅ `continum-example.ts` (or `.js`) - Sample code to get started
+- ✅ `@continum/sdk` installed in your project
+
+## Interactive Prompts
+
+### 1. Framework Setup (if no package.json)
+
+```
+┌  Continum Setup
+│
+◇  Set up a JavaScript framework first?
+│  Yes
+│
+◇  What type of project are you building?
+│  🎨 Frontend (React, Vue, Svelte, etc.)
+│
+◇  Choose a frontend framework:
+│  Next.js (App Router)
+```
+
+### 2. Product Type
+
+```
+◇  What kind of AI product are you building?
+│  💬 Customer support bot
+```
+
+**Options:**
+- 💬 Customer support bot
+- 💻 Coding assistant
+- ⚖️ Legal or research tool
+- 🏥 Healthcare application
+- 💰 Financial services
+- 🤖 AI agent with tool use
+- ✍️ Content generation
+- 🔧 Internal team tool
+- 📊 Data pipeline
+- 🎓 Education tool
+
+### 3. LLM Providers
+
+```
+◇  Which LLM providers are you using?
+│  ◼ OpenAI
+│  ◼ Anthropic
+```
+
+**Options:**
+- OpenAI (GPT-4o, GPT-4, o1, o3)
+- Anthropic (Claude Opus, Sonnet, Haiku)
+- Google Gemini (Gemini Pro, Flash)
+- Azure OpenAI
+- AWS Bedrock
+- Other
+
+### 4. Compliance Frameworks
+
+```
+◇  Do you need to comply with any specific frameworks?
+│  ◼ GDPR
+│  ◼ SOC2
+```
+
+**Options:**
+- GDPR (EU data protection)
+- CCPA (California privacy)
+- SOC2 (Security & availability)
+- HIPAA (US healthcare data)
+- EU AI Act (EU AI regulation)
+- ISO 27001 (Information security)
+- FINRA (US financial services)
+- PCI DSS (Payment card security)
+- NIST AI RMF (AI risk management)
+
+### 5. Alert Channels
+
+```
+◇  Set up real-time alerts for compliance violations?
+│  Yes
+│
+◇  Which alert channels do you want to configure?
+│  ◼ Slack
+│  ◼ PagerDuty
+│
+◇  Slack webhook URL (or press Enter to use env var):
+│  https://hooks.slack.com/services/...
+```
+
+**Options:**
+- Slack - Team notifications
+- PagerDuty - Critical incidents
+- Discord - Community alerts
+- Custom Webhook - Your own endpoint
+
+All webhook URLs must use HTTPS for security.
+
+## Generated Files
+
+### continum.config.ts
+
+```typescript
+import type { ContinumConfig } from '@continum/sdk';
+
+const config: ContinumConfig = {
+  apiKey: process.env.CONTINUM_API_KEY,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2'],
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY,
+  },
+};
+
+export default config;
+```
+
+### .env
+
+```bash
+# Continum Configuration
+CONTINUM_API_KEY=your_api_key_here
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+PAGERDUTY_KEY=YOUR_PAGERDUTY_INTEGRATION_KEY
+```
+
+### continum-example.ts
+
+```typescript
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+// Example 1: Basic usage with protect()
+async function example1() {
+  const response = await protect(
+    () => openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: 'Hello!' }]
+    }),
+    {
+      apiKey: process.env.CONTINUM_API_KEY!,
+      preset: 'customer-support',
+      comply: ['GDPR', 'SOC2'],
+      alerts: {
+        slack: process.env.SLACK_WEBHOOK_URL,
+        pagerduty: process.env.PAGERDUTY_KEY,
+      },
+    }
+  );
+
+  console.log(response.choices[0].message.content);
+}
+
+// Example 2: Global configuration (recommended)
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  comply: ['GDPR', 'SOC2'],
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY,
+  },
+});
+
+async function example2() {
+  const response = await continum.protect(
+    () => openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: 'Hello!' }]
+    })
+  );
+}
+
+// Example 3: Blocking mode
+async function example3() {
+  try {
+    const response = await protect(
+      () => openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: 'Process this payment' }]
+      }),
+      {
+        apiKey: process.env.CONTINUM_API_KEY!,
+        blockOn: 'HIGH' // Block if risk level is HIGH or CRITICAL
+      }
+    );
+  } catch (error) {
+    if (error.name === 'ContinumBlockedError') {
+      console.error('Blocked:', error.signal.violations);
+    }
+  }
+}
+```
+
+## Example Sessions
+
+### Starting from Scratch
+
+```bash
+$ mkdir my-ai-app
+$ cd my-ai-app
+$ npx continum init
+
+┌  Continum Setup
+│
+◇  Set up a JavaScript framework first?
+│  Yes
+│
+◇  What type of project are you building?
+│  🎨 Frontend (React, Vue, Svelte, etc.)
+│
+◇  Choose a frontend framework:
+│  Next.js (App Router)
+│
+◆  Setting up nextjs-app...
+│  ✓ nextjs-app installed successfully!
+│
+◇  Set up Continum AI compliance in your project?
+│  Yes
+│
+◇  What kind of AI product are you building?
+│  💬 Customer support bot
+│
+◇  Which LLM providers are you using?
+│  ◼ OpenAI
+│
+◇  Do you need to comply with any specific frameworks?
+│  ◼ GDPR
+│
+◇  Set up real-time alerts for compliance violations?
+│  Yes
+│
+◇  Which alert channels do you want to configure?
+│  ◼ Slack
+│
+◇  Slack webhook URL (or press Enter to use env var):
+│  https://hooks.slack.com/services/...
+│
+◇  Install @continum/sdk now?
+│  Yes
+│
+◆  Installing @continum/sdk...
+│  ✓ @continum/sdk installed!
+│
+◆  Setting up Continum...
+│
+├  Setup Complete
+│
+│  ✓ Created continum.config.ts
+│  ✓ Created .env with placeholder values
+│  ✓ Created continum-example.ts with sample code
+│  ✓ Installed @continum/sdk
+│
+└  Next steps:
+
+   1. Add your API key to .env
+   2. Wrap your first LLM call with protect()
+   3. Check continum-example.ts for examples
+   4. Run your app and view violations in the dashboard
+
+   Docs: https://docs.continum.co/quickstart
+   Dashboard: https://app.continum.co
+```
+
+### Existing Project
+
+```bash
+$ cd my-existing-app
+$ npx continum init
+
+┌  Continum Setup
+│
+ℹ  Detected framework: Next.js (App Router)
+│
+◇  Set up Continum AI compliance in your project?
+│  Yes
+│
+◇  What kind of AI product are you building?
+│  💬 Customer support bot
+│
+...
+```
+
+## Requirements
+
+- Node.js >= 18.0.0
+- A Continum API key (get one at https://app.continum.co)
+
+## Get Your API Key
+
+Get your API key from the [dashboard](https://app.continum.co):
+
+1. Sign in with GitHub
+2. Create a customer account (Individual or Company)
+3. Generate an API key
+4. Save it securely (you won't see it again)
+
+## Next Steps
+
+After running `npx continum init`:
+
+1. **Add your API key** to `.env`
+2. **Import and use** the SDK in your code
+3. **Check the example file** for usage patterns
+4. **View the dashboard** at https://app.continum.co
+
+## Documentation
+
+- [Quick Start Guide](https://docs.continum.co/quickstart)
+- [SDK Documentation](https://docs.continum.co/sdk)
+- [Alert Setup Guide](https://docs.continum.co/sdk/alerts)
+- [API Reference](https://docs.continum.co/api)
+
+## Support
+
+- **Docs**: https://docs.continum.co
+- **Dashboard**: https://app.continum.co
+- **Email**: support@continum.co

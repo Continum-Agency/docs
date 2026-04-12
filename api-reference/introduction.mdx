@@ -16,17 +16,17 @@ https://api.continum.co
 Authenticate using your API key in the `x-continum-key` header:
 
 ```bash
-curl https://api.continum.co/customers \
+curl https://api.continum.co/audits \
   -H "x-continum-key: co_your_api_key_here"
 ```
 
 ## API Keys
 
-Get your API key from the [dashboard](https://app.continum.co/dashboard):
+Get your API key from the [dashboard](https://app.continum.co):
 
 1. Sign in with GitHub
-2. Create a customer account
-3. Navigate to API Keys
+2. Create a customer account (Individual or Company)
+3. Navigate to Settings → API Keys
 4. Generate a new key
 
 <Warning>
@@ -202,8 +202,8 @@ Official SDKs are available:
 ## API Endpoints
 
 <CardGroup cols={2}>
-  <Card title="Customer" icon="user" href="/api-reference/customer/create">
-    Manage customer accounts
+  <Card title="Audits" icon="search" href="/api-reference/audits/list">
+    Query compliance audits
   </Card>
   <Card title="Sandbox" icon="cube" href="/api-reference/sandbox/create">
     Configure compliance sandboxes
