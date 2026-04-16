@@ -22,7 +22,9 @@ try {
       messages: [{ role: 'user', content: 'Process this payment' }]
     }),
     {
-      apiKey: process.env.CONTINUM_API_KEY!,
+      apiKey: process.env.CONTINUM_API_KEY!
+    },
+    {
       blockOn: 'HIGH'  // Block if risk level is HIGH or CRITICAL
     }
   );
@@ -112,7 +114,8 @@ import { protect, ContinumBlockedError } from '@continum/sdk';
 try {
   const response = await protect(
     () => openai.chat.completions.create({...}),
-    { apiKey: '...', blockOn: 'HIGH' }
+    { apiKey: process.env.CONTINUM_API_KEY! },
+    { blockOn: 'HIGH' }
   );
 } catch (error) {
   if (error instanceof ContinumBlockedError) {

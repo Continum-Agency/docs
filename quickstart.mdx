@@ -72,7 +72,9 @@ const response = await protect(
     ]
   }),
   {
-    apiKey: process.env.CONTINUM_API_KEY!,
+    apiKey: process.env.CONTINUM_API_KEY!
+  },
+  {
     preset: 'customer-support',
     comply: ['GDPR', 'SOC2']
   }
@@ -96,7 +98,9 @@ const response = await protect(
     ]
   }),
   {
-    apiKey: process.env.CONTINUM_API_KEY!,
+    apiKey: process.env.CONTINUM_API_KEY!
+  },
+  {
     preset: 'customer-support',
     comply: ['GDPR', 'SOC2']
   }
@@ -115,7 +119,9 @@ const model = genai.getGenerativeModel({ model: 'gemini-2.5-pro' });
 const response = await protect(
   () => model.generateContent('What is the capital of France?'),
   {
-    apiKey: process.env.CONTINUM_API_KEY!,
+    apiKey: process.env.CONTINUM_API_KEY!
+  },
+  {
     preset: 'customer-support',
     comply: ['GDPR', 'SOC2']
   }

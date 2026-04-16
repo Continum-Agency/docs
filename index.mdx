@@ -44,7 +44,9 @@ const response = await protect(
     messages: [{ role: 'user', content: 'Hello!' }]
   }),
   {
-    apiKey: process.env.CONTINUM_API_KEY!,
+    apiKey: process.env.CONTINUM_API_KEY!
+  },
+  {
     preset: 'customer-support',
     comply: ['GDPR', 'SOC2']
   }

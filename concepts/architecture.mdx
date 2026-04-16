@@ -69,9 +69,23 @@ Access your compliance data:
 ### 1. LLM Call with Monitoring
 
 ```typescript
-const response = await continum.llm.openai.gpt_4o.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
-});
+import { protect } from '@continum/sdk';
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+const response = await protect(
+  () => openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: 'Hello' }]
+  }),
+  {
+    apiKey: process.env.CONTINUM_API_KEY!
+  },
+  {
+    preset: 'customer-support'
+  }
+);
 ```
 
 **What happens**:
@@ -161,11 +175,11 @@ npm install @continum/sdk
 Configure with your API key:
 
 ```typescript
-import { Continum } from '@continum/sdk';
+import { continum } from '@continum/sdk';
 
-const continum = new Continum({
-  continumKey: process.env.CONTINUM_KEY,
-  openaiKey: process.env.OPENAI_API_KEY
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support'
 });
 ```
 
@@ -173,10 +187,10 @@ const continum = new Continum({
 
 **Your Application**:
 ```bash
-CONTINUM_KEY=co_xxx
+CONTINUM_API_KEY=ctn_live_xxx
 OPENAI_API_KEY=sk-xxx
 ANTHROPIC_API_KEY=sk-ant-xxx
-GEMINI_API_KEY=xxx
+GOOGLE_API_KEY=xxx
 ```
 
 ## Next Steps

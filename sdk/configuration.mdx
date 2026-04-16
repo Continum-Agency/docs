@@ -5,7 +5,7 @@ description: "Configure the Continum SDK for your use case"
 
 ## SDK Version
 
-**Current Version**: 0.6.0
+**Current Version**: 0.6.4
 
 ## Configuration Methods
 
@@ -42,7 +42,9 @@ import { protect } from '@continum/sdk';
 const response = await protect(
   () => openai.chat.completions.create({...}),
   {
-    apiKey: process.env.CONTINUM_API_KEY!,
+    apiKey: process.env.CONTINUM_API_KEY!
+  },
+  {
     preset: 'customer-support',
     comply: ['GDPR', 'SOC2']
   }
