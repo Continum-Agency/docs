@@ -1,0 +1,363 @@
+---
+title: "Violation Handlers"
+description: "React to specific violations in your code"
+---
+
+## Overview
+
+Violation handlers allow you to react to specific compliance violations in your code. Instead of just receiving alerts, you can programmatically handle violations and take custom actions.
+
+## Basic Usage
+
+```typescript
+import { continum } from '@continum/sdk';
+
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  onViolation: {
+    PII_LEAK: async (signal) => {
+      console.log('PII detected:', signal.reasoning);
+      await logSecurityIncident(signal);
+    },
+    PROMPT_INJECTION: async (signal) => {
+      console.log('Prompt injection detected:', signal.reasoning);
+      await blockUser(signal.userId);
+    }
+  }
+});
+```
+
+## Violation-Specific Handlers
+
+Handle specific violation types:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  onViolation: {
+    // PII violations
+    PII_LEAK: async (signal) => {
+      await sendAlert('PII detected', signal);
+      await logToSIEM(signal);
+    },
+    
+    // Security violations
+    PROMPT_INJECTION: async (signal) => {
+      await logSecurityIncident(signal);
+      await notifySecurityTeam(signal);
+    },
+    
+    // Bias violations
+    BIAS_DETECTION: async (signal) => {
+      await logBiasIncident(signal);
+      await notifyHRTeam(signal);
+    }
+  }
+});
+```
+
+## Risk Level Handlers
+
+Handle violations by risk level:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  onRiskLevel: {
+    CRITICAL: async (signal) => {
+      await notifySecurityTeam(signal);
+      await createIncident(signal);
+    },
+    HIGH: async (signal) => {
+      await logToSIEM(signal);
+    },
+    MEDIUM: async (signal) => {
+      await logToAuditTrail(signal);
+    }
+  }
+});
+```
+
+## Signal Properties
+
+The signal object contains detailed information about the violation:
+
+```typescript
+interface AuditSignal {
+  auditId: string;              // Unique audit ID
+  sandboxId: string;            // Sandbox that detected the violation
+  riskLevel: RiskLevel;         // LOW, MEDIUM, HIGH, CRITICAL
+  violations: ViolationCode[];  // Array of violation codes
+  piiDetected: boolean;         // Whether PII was detected
+  reasoning: string;            // Explanation of the violation
+  regulation: ComplianceFramework[]; // Applicable regulations
+  provider: string;             // LLM provider
+  model: string;                // Model name
+  durationMs: number;           // Audit duration
+  timestamp: string;            // ISO 8601 timestamp
+  sessionId?: string;           // Session ID (if provided)
+  userId?: string;              // User ID (if provided)
+  isBlocked: boolean;           // Whether request was blocked
+}
+```
+
+## Example Handlers
+
+### Security Incident Response
+
+```typescript
+async function handleSecurityViolation(signal: AuditSignal) {
+  // Log to SIEM
+  await logToSplunk({
+    type: 'security_violation',
+    auditId: signal.auditId,
+    violations: signal.violations,
+    riskLevel: signal.riskLevel,
+    userId: signal.userId,
+    timestamp: signal.timestamp
+  });
+  
+  // Create incident ticket
+  if (signal.riskLevel === 'CRITICAL') {
+    await createJiraTicket({
+      summary: `Critical Security Violation: ${signal.violations.join(', ')}`,
+      description: signal.reasoning,
+      priority: 'Critical',
+      assignee: 'security-team'
+    });
+  }
+  
+  // Notify security team
+  await sendSlackMessage('#security-alerts', {
+    text: `🚨 ${signal.riskLevel} violation detected`,
+    attachments: [{
+      color: signal.riskLevel === 'CRITICAL' ? 'danger' : 'warning',
+      fields: [
+        { title: 'Audit ID', value: signal.auditId, short: true },
+        { title: 'Violations', value: signal.violations.join(', '), short: true },
+        { title: 'User ID', value: signal.userId || 'Unknown', short: true },
+        { title: 'Reasoning', value: signal.reasoning, short: false }
+      ]
+    }]
+  });
+}
+```
+
+### PII Data Protection
+
+```typescript
+async function handlePIIViolation(signal: AuditSignal) {
+  // Log for GDPR compliance
+  await logGDPRIncident({
+    auditId: signal.auditId,
+    dataTypes: extractPIITypes(signal.violations),
+    userId: signal.userId,
+    timestamp: signal.timestamp,
+    reasoning: signal.reasoning
+  });
+  
+  // Notify data protection officer
+  if (signal.riskLevel === 'HIGH' || signal.riskLevel === 'CRITICAL') {
+    await sendEmail({
+      to: 'dpo@company.com',
+      subject: 'PII Violation Detected',
+      body: `
+        A ${signal.riskLevel} PII violation was detected:
+        
+        Audit ID: ${signal.auditId}
+        User ID: ${signal.userId}
+        Violations: ${signal.violations.join(', ')}
+        Reasoning: ${signal.reasoning}
+        
+        Please review and take appropriate action.
+      `
+    });
+  }
+}
+```
+
+### Bias Detection Response
+
+```typescript
+async function handleBiasViolation(signal: AuditSignal) {
+  // Log bias incident
+  await logBiasIncident({
+    auditId: signal.auditId,
+    biasType: extractBiasType(signal.violations),
+    userId: signal.userId,
+    timestamp: signal.timestamp,
+    reasoning: signal.reasoning
+  });
+  
+  // Notify HR team for review
+  await sendSlackMessage('#hr-alerts', {
+    text: `⚠️ Bias detected in AI response`,
+    attachments: [{
+      color: 'warning',
+      fields: [
+        { title: 'Audit ID', value: signal.auditId, short: true },
+        { title: 'Bias Type', value: extractBiasType(signal.violations), short: true },
+        { title: 'User ID', value: signal.userId || 'Unknown', short: true },
+        { title: 'Reasoning', value: signal.reasoning, short: false }
+      ]
+    }]
+  });
+  
+  // Update bias metrics
+  await updateBiasMetrics(signal);
+}
+```
+
+## Combining with Alerts
+
+Use violation handlers alongside alerts for comprehensive coverage:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  preset: 'customer-support',
+  
+  // Real-time alerts
+  alerts: {
+    slack: process.env.SLACK_WEBHOOK_URL,
+    pagerduty: process.env.PAGERDUTY_KEY
+  },
+  
+  // Custom handlers
+  onViolation: {
+    PII_LEAK: async (signal) => {
+      await logGDPRIncident(signal);
+    },
+    PROMPT_INJECTION: async (signal) => {
+      await blockSuspiciousUser(signal.userId);
+    }
+  },
+  
+  onRiskLevel: {
+    CRITICAL: async (signal) => {
+      await escalateToHuman(signal);
+    }
+  }
+});
+```
+
+## Error Handling
+
+Handle errors in violation handlers gracefully:
+
+```typescript
+continum.configure({
+  apiKey: process.env.CONTINUM_API_KEY!,
+  onViolation: {
+    PII_LEAK: async (signal) => {
+      try {
+        await logSecurityIncident(signal);
+        await notifySecurityTeam(signal);
+      } catch (error) {
+        console.error('Failed to handle PII violation:', error);
+        // Fallback action
+        await sendFallbackAlert(signal, error);
+      }
+    }
+  },
+  
+  // Global error handler for audit failures
+  onError: (error) => {
+    console.error('Audit error:', error);
+    // Log audit failures for monitoring
+  }
+});
+```
+
+## Best Practices
+
+### 1. Keep Handlers Fast
+
+Violation handlers should be fast and non-blocking:
+
+```typescript
+// ✅ Good - async operations
+onViolation: {
+  PII_LEAK: async (signal) => {
+    // Fast operations
+    await logToDatabase(signal);
+    await sendAlert(signal);
+  }
+}
+
+// ❌ Avoid - slow operations
+onViolation: {
+  PII_LEAK: async (signal) => {
+    // Slow operations that could delay other audits
+    await generateDetailedReport(signal);
+    await sendEmailWithAttachments(signal);
+  }
+}
+```
+
+### 2. Use Appropriate Log Levels
+
+Log violations at appropriate levels:
+
+```typescript
+onRiskLevel: {
+  CRITICAL: async (signal) => {
+    console.error('CRITICAL violation:', signal);
+    await alertOncall(signal);
+  },
+  HIGH: async (signal) => {
+    console.warn('HIGH violation:', signal);
+    await logToSIEM(signal);
+  },
+  MEDIUM: async (signal) => {
+    console.info('MEDIUM violation:', signal);
+  },
+  LOW: async (signal) => {
+    console.debug('LOW violation:', signal);
+  }
+}
+```
+
+### 3. Implement Circuit Breakers
+
+Prevent cascading failures:
+
+```typescript
+let alertFailureCount = 0;
+const MAX_FAILURES = 5;
+
+onViolation: {
+  PII_LEAK: async (signal) => {
+    if (alertFailureCount >= MAX_FAILURES) {
+      console.warn('Alert system disabled due to failures');
+      return;
+    }
+    
+    try {
+      await sendAlert(signal);
+      alertFailureCount = 0; // Reset on success
+    } catch (error) {
+      alertFailureCount++;
+      console.error('Alert failed:', error);
+    }
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Alerts" icon="bell" href="/sdk/alerts">
+    Set up real-time alerts
+  </Card>
+  <Card title="Blocking Mode" icon="hand" href="/sdk/blocking-mode">
+    Block requests based on violations
+  </Card>
+  <Card title="Dashboard" icon="gauge" href="/dashboard/overview">
+    View violations in the dashboard
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore the REST API
+  </Card>
+</CardGroup>
