@@ -330,15 +330,17 @@ continum.configure({
 });
 ```
 
-### 4. Test in Development
+### 4. Use Environment Variables
 
-Use local mode to test without consuming quota:
+Keep configuration flexible:
 
 ```typescript
+const frameworks = process.env.COMPLIANCE_FRAMEWORKS?.split(',') || [];
+
 continum.configure({
   apiKey: process.env.CONTINUM_API_KEY!,
   preset: 'customer-support',
-  local: true  // Runs audits locally, no API calls
+  comply: frameworks as ComplianceFramework[]
 });
 ```
 
@@ -354,7 +356,7 @@ continum.configure({
   <Card title="Violation Handlers" icon="code" href="/sdk/violation-handlers">
     React to specific violations in code
   </Card>
-  <Card title="Local Development" icon="laptop" href="/sdk/local-mode">
-    Test compliance without API calls
+  <Card title="Configuration" icon="gear" href="/sdk/configuration">
+    Advanced SDK configuration
   </Card>
 </CardGroup>

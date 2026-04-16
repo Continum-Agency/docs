@@ -78,9 +78,6 @@ interface ContinumConfig {
   environment?: 'production' | 'staging' | 'development';
   region?: string;
   
-  // Local development
-  local?: boolean;
-  
   // Blocking mode
   blockOn?: RiskLevel;
   
@@ -213,19 +210,6 @@ Specify the region for data residency:
 }
 ```
 
-### local
-
-Enable local mode for development (no API calls, no quota used):
-
-```typescript
-{
-  apiKey: process.env.CONTINUM_API_KEY!,
-  local: true  // Runs audits locally
-}
-```
-
-[Learn more about local mode →](/sdk/local-mode)
-
 ## Blocking Mode
 
 Wait for audit results before returning response:
@@ -344,7 +328,6 @@ const response = await continum.protect(
 continum.configure({
   apiKey: process.env.CONTINUM_API_KEY!,
   preset: 'customer-support',
-  local: true,  // No API calls, no quota used
   environment: 'development'
 });
 ```
@@ -455,7 +438,7 @@ const response = await continum.protect(
   <Card title="Blocking Mode" icon="hand" href="/sdk/blocking-mode">
     Block requests based on violations
   </Card>
-  <Card title="Local Mode" icon="laptop" href="/sdk/local-mode">
-    Test without API calls
+  <Card title="Configuration" icon="gear" href="/sdk/configuration">
+    Advanced SDK configuration
   </Card>
 </CardGroup>
