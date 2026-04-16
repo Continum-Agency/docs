@@ -10,7 +10,7 @@
   "fonts": {
     "family": "IBM Plex Sans"
   },
-  "favicon": "/favicon.ico",
+  "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
